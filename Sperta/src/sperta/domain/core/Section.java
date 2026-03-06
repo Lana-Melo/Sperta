@@ -6,7 +6,7 @@ import java.util.Map;
 
 import sperta.utils.SectionType;
 
-public class Section {
+public class Section implements ISection{
     private Long contador;
     private SectionType type;
     private List<Device> devices;
@@ -16,7 +16,7 @@ public class Section {
      * Contador is correspondent to the next available number. If there are no houses, contador should equal to 0
      * @param contador
      */
-    public Section(SectionType type, Long contador, Map<String, IUser> mantainers){
+    public Section (SectionType type, Long contador, Map<String, IUser> mantainers){
         this.type = type;
         this.contador = contador;
         this.devices = new ArrayList<>();
@@ -63,7 +63,7 @@ public class Section {
 
     public void removeDevice(Device d){
         this.devices.removeIf(device -> device.getId().equals(d.getId()));
-    }
+}
 
     public void setMantainers(Map<String, IUser> mantainers) {
         this.mantainers = mantainers;
