@@ -1,6 +1,5 @@
 package sperta.domain.core;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +36,7 @@ public class Home {
     private Map<SectionType, ISection> makeSections(){
         Map<SectionType, ISection> map = new EnumMap<>(SectionType.class);
         for (SectionType type: SectionType.values()){
+            if (type == SectionType.ALL) continue; //skip "all"
             ISection s = new Section(type, 0L , new HashMap<>());
             map.put(type, s);
         }

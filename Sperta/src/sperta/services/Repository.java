@@ -9,7 +9,7 @@ import sperta.domain.core.IUser;
 public enum Repository {
     INSTANCE;
     
-    Map<String, IUser> UserCatalog = new ConcurrentHashMap<>();
+    Map<String, IUser> userCatalog = new ConcurrentHashMap<>(); //Ins....
 
-    Map<Long, Home> HomeCatalog = new ConcurrentHashMap<>();
+    Map<Long, Home> homeCatalog = new ConcurrentHashMap<>(); //Instead of having a HomeCatalog class, let's just have this (Guilherme)
 }

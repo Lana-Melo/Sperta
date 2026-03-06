@@ -1,5 +1,5 @@
 package sperta.utils;
 
-public enum Operations {
+public enum Operation {
     CREATE, ADD, RD, EC, RT, RH
 }
