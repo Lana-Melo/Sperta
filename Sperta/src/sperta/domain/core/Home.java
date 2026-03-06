@@ -3,13 +3,14 @@ package sperta.domain.core;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import sperta.utils.SectionType;
 
 public class Home {
 
-    private static long counter; 
+    private static Long counter; 
 
     private Long id;
     private String name;
@@ -74,5 +75,32 @@ public class Home {
         this.sections = sections;
     }
 
+    public void addDevice(SectionType type){
+        this.getSections().get(type).addDevice();
+    }
+
+    public void addDevicesOfType(int n, SectionType type){
+        this.getSections().get(type).addDevices(n);
+    }
+
+    public List<Device> getSectionDevices(SectionType type){
+        return this.getSections().get(type).getDevices();
+    }
+
+    public void addMantainerToSection(IUser mantainer, SectionType type){
+        this.getSections().get(type).addMantainer(mantainer);
+    }
+
+    public void removeMantainerFromSection(IUser mantainer, SectionType type){
+        this.getSections().get(type).removeMantainer(mantainer);
+    }
+
+    public void removeDeviceFromSection(Device d, SectionType type){
+        this.getSections().get(type).removeDevice(d);
+    }
+
+    public Device getDeviceFromSectionById(Long id, SectionType type){
+        return this.getSections().get(type).getDevicebyId(id);
+    }
 
 }
