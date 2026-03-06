@@ -1,7 +1,7 @@
 package sperta.utils;
 
 import java.time.LocalDateTime;
-import sperta.domain.core.Home;
+import sperta.domain.core.House;
 import sperta.domain.core.IUser;
 import sperta.domain.core.Device;
 
@@ -25,18 +25,18 @@ public class LogEntry {
     private LocalDateTime timestamp;
     private IUser user;
     private Operation operation;
-    private Home home;
+    private House house;
 
     private IUser addedUser;
     private SectionType sectionType;
     private Device device;
     private int devicesValue;
 
-    LogEntry(LocalDateTime timestamp, IUser user, Operation op, Home home){
+    LogEntry(LocalDateTime timestamp, IUser user, Operation op, House house){
         this.timestamp = timestamp;
         this.user = user;
         this.operation = op;
-        this.home = home;
+        this.house = house;
     }
 
     public LocalDateTime getTimestamp() {
@@ -63,12 +63,12 @@ public class LogEntry {
         this.operation = operation;
     }
 
-    public Home getHome() {
-        return home;
+    public House getHouse() {
+        return house;
     }
 
-    public void setHome(Home home) {
-        this.home = home;
+    public void setHouse(House home) {
+        this.house = home;
     }
 
     public IUser getAddedUser() {
@@ -105,11 +105,11 @@ public class LogEntry {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + home+ " ");
+        StringBuilder sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + house+ " ");
         if (operation == Operation.CREATE){
             sb.append("# Criar Casa");
         } else if (operation == Operation.ADD){
-            sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + addedUser+ " " + home + " " + sectionType + " # Adicionar Utilizador");
+            sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + addedUser+ " " + house + " " + sectionType + " # Adicionar Utilizador");
         } else if (operation == Operation.RD){
             sb.append(sectionType + " # Registar Dispositivo");
         } else if (operation == Operation.EC){

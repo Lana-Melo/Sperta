@@ -7,7 +7,7 @@ import java.util.Map;
 
 import sperta.utils.SectionType;
 
-public class Home {
+public class House {
 
     private static Long counter; 
 
@@ -16,7 +16,7 @@ public class Home {
     private IUser owner;
     private Map<SectionType, ISection> sections;
 
-    public Home(IUser owner){
+    public House(IUser owner){
         this.owner = owner;
         this.id = counter;
         this.name = "Casa";
@@ -25,7 +25,7 @@ public class Home {
         counter++;
     }
 
-    public Home(IUser owner, String name, Long id, Map<SectionType, ISection> sections){
+    public House(IUser owner, String name, Long id, Map<SectionType, ISection> sections){
         this.owner = owner;
         this.id = id;
         this.name = name;

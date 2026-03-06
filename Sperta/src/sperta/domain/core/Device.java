@@ -7,10 +7,21 @@ public class Device {
     private SectionType type;
     private Integer state;
 
+    /**
+     * SectionType t can't be ALL
+     * @param id
+     * @param t
+     */
     Device(Long id, SectionType t){
         this.id = id;
         this.type = t;
         this.state = 0;
+    }
+
+    Device(Long id, SectionType type, Integer state){
+        this.id = id;
+        this.type = type;
+        this.state = state;
     }
 
     public Long getId() {
