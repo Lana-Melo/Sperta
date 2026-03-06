@@ -71,6 +71,10 @@ public class House {
         return sections;
     }
 
+    public ISection getSection(SectionType type){
+        return sections.get(type);
+    }
+
     public void setSections(Map<SectionType, ISection> sections) {
         this.sections = sections;
     }

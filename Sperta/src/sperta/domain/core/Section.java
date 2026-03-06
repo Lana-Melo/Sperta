@@ -88,4 +88,8 @@ public class Section implements ISection{
     public void setType(SectionType t){
         this.type = t;
     }
+
+    public boolean hasMantainer(IUser user){
+        return this.mantainers.containsKey(user.getUserId());
+    }
 }

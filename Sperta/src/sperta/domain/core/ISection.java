@@ -34,4 +34,5 @@ public interface ISection {
 
     void setType(SectionType t);
 
+    boolean hasMantainer(IUser user);
 }
