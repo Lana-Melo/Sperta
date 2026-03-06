@@ -30,13 +30,18 @@ public class LogEntry {
     private IUser addedUser;
     private SectionType sectionType;
     private Device device;
-    private int devicesValue;
+    private Integer devicesValue;
 
     LogEntry(LocalDateTime timestamp, IUser user, Operation op, House house){
         this.timestamp = timestamp;
         this.user = user;
         this.operation = op;
         this.house = house;
+
+        this.addedUser = null;
+        this.sectionType = null;
+        this.device = null;
+        this.devicesValue = null;
     }
 
     public LocalDateTime getTimestamp() {
@@ -95,12 +100,25 @@ public class LogEntry {
         this.device = device;
     }
 
-    public int getDevicesValue() {
+    public Integer getDevicesValue() {
         return devicesValue;
     }
 
     public void setDevicesValue(int devicesValue) {
         this.devicesValue = devicesValue;
+    }
+
+    public String getCsvString() {
+        return new StringBuilder()
+            .append(timestamp.toString()).append(",")
+            .append(user.toString()).append(",")
+            .append(operation.toString()).append(",")
+            .append(house.toString()).append(",")
+            .append(addedUser).append(",")
+            .append(sectionType).append(",")
+            .append(device).append(",")
+            .append(devicesValue)
+            .toString();
     }
 
     @Override

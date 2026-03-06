@@ -37,10 +37,10 @@ public class LoggerService {
      */
     public void insertLog(LogEntry log) throws IOException { 
         Path housePath = determineHousePath(log);
-        writeToFile(housePath, log);
+        writeLogToFile(housePath, log);
         if (log.getOperation().equals(Operation.EC) || log.getOperation().equals(Operation.RD)){
             Path devicePath = determineDevicePath(log, DATA_PATH);
-            writeToFile(devicePath, log);
+            writeCsvLogToFile(devicePath, log);
         }
     }
 
@@ -134,13 +134,26 @@ public class LoggerService {
      * @param log
      * @throws IOException
      */
-    private void writeToFile(Path p, LogEntry log) throws IOException{
+    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException{
+        if (!Files.exists(p)) Files.createFile(p); 
+        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
+        fos.write(log.getCsvString().getBytes());
+        fos.close();
+    }
+
+
+    /**
+     * Assumes path is a valid path to a File. If the File doesn't exist, creates it
+     * @param p
+     * @param log
+     * @throws IOException
+     */
+    private void writeLogToFile(Path p, LogEntry log) throws IOException{
         if (!Files.exists(p)) Files.createFile(p); 
         FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
         fos.write(log.toString().getBytes());
         fos.close();
     }
-
 
     /**
      * This algorithm accesses the last line by going through the whole document,
