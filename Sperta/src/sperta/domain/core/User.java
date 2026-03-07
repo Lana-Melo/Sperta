@@ -12,6 +12,7 @@ public class User extends AUser{
 
     @Override
     public String toString() {
-        return "User [userId=" + this.getUserId() + ", password=" + this.getPassword() + "]";
+        return "User [userId=" + this.getUserId() + "]";
+
     }
 }

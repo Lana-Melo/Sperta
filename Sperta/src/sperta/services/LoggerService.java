@@ -45,7 +45,7 @@ public class LoggerService {
     }
 
     /**
-     * Gets a List with all of the operations
+     * Gets a List with all last operations of all of the house's devices
      * @param house
      * @return
      * @throws IOException
