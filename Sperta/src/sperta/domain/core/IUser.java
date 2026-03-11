@@ -1,6 +1,6 @@
 package sperta.domain.core;
 
-public interface IUser {
+public interface IUser extends java.io.Serializable {
     String getUserId();
 
     void setUserId(String userId);

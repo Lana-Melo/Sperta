@@ -4,12 +4,11 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import sperta.utils.SectionType;
 
-public class House {
+public class House implements java.io.Serializable {
 
-    private static Long counter; 
+    private static Long counter = 0L; 
 
     private Long id;
     private String name;
@@ -107,4 +106,15 @@ public class House {
         return this.getSections().get(type).getDevicebyId(id);
     }
 
+    @Override
+    public String toString(){
+        String houseString = "House [id=" + id + ", name=" + name + ", owner=" + owner.getUserId() + "]";
+        for (SectionType type: this.getSections().keySet()){
+            houseString += "\n  Section " + type + ":";
+            for (Device d: this.getSections().get(type).getDevices()){
+                houseString += "\n    " + d;
+            }
+        }
+        return houseString;
+    }
 }

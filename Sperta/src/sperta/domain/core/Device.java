@@ -2,7 +2,7 @@ package sperta.domain.core;
 
 import sperta.utils.SectionType;
 
-public class Device {
+public class Device  implements java.io.Serializable {
     private Long id;
     private SectionType type;
     private Integer state;
@@ -47,6 +47,16 @@ public class Device {
         this.state = state;
     }
 
+    @Override
+    public String toString() {
+        return " Device{" +
+                "id=" + id +
+                ", type=" + type +
+                ", state=" + state +
+                '}';
+    }
+
+    
 
     //@Override
     //public boolean equals(Object other){
