@@ -1,6 +1,6 @@
 package sperta.domain.core;
 
-public abstract class AUser {
+public abstract class AUser implements IUser {
     private String userId;
     private String password;
 
