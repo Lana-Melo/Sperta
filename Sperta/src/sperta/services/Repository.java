@@ -2,16 +2,22 @@ package sperta.services;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
+import sperta.utils.Persistence;
 
 public enum Repository {
     INSTANCE;
     
-    Map<String, IUser> userCatalog = new ConcurrentHashMap<>(); //Ins....
+    Map<String, IUser> userCatalog = new ConcurrentHashMap<>();
+    Map<Long, House> homeCatalog = new ConcurrentHashMap<>();
 
-    Map<Long, House> homeCatalog = new ConcurrentHashMap<>(); //Instead of having a HomeCatalog class, let's just have this (Guilherme)
+    private Repository() {
+        Persistence.load("./data/users.txt", userCatalog);
+        Persistence.load("./data/homes.txt", homeCatalog);
+    }
 
-    //I think that methods in this Repository should all be static!
+    
+
+
 }

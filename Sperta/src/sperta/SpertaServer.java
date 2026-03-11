@@ -17,7 +17,7 @@ import sperta.utils.SectionType;
 public class SpertaServer {
 
     private Map<String, IUser> bkpUsersCatalog = new HashMap<>();
-    private Map<String, House> bkpHomesCatalog = new HashMap<>();
+    private Map<Long, House> bkpHomesCatalog = new HashMap<>();
     
     private static final int DEFAULT_PORT_NUMBER = 22345;
 
@@ -126,11 +126,11 @@ public class SpertaServer {
         home2.addDevice(SectionType.GARDEN);
         home3.addDevice(SectionType.LUZES);
 
-        Map<String, House> mockHomesMap = new HashMap<>();
+        Map<Long, House> mockHomesMap = new HashMap<>();
 
-        mockHomesMap.put(home1.getName(), home1);
-        mockHomesMap.put(home2.getName(), home2);
-        mockHomesMap.put(home3.getName(), home3);
+        mockHomesMap.put(home1.getId(), home1);
+        mockHomesMap.put(home2.getId(), home2);
+        mockHomesMap.put(home3.getId(), home3);
 
         try (ObjectOutputStream out =
                 new ObjectOutputStream(new FileOutputStream("./data/homes.txt"))) {
