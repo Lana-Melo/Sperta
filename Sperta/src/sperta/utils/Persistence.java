@@ -17,9 +17,9 @@ public class Persistence {
      * @requires the Map type T to be Serializable 
      * 
      */
-    public static <T extends Serializable> void load(String filename, Map<String, T> dest) {
+    public static <K, T extends Serializable> void load(String filename, Map<K, T> dest) {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(filename))) {
-            Map<String, T> loadedMap = (Map<String, T>) in.readObject();
+            Map<K, T> loadedMap = (Map<K, T>) in.readObject();
             dest.clear();
             dest.putAll(loadedMap);
 
