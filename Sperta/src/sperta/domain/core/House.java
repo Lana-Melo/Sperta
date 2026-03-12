@@ -6,29 +6,25 @@ import java.util.List;
 import java.util.Map;
 import sperta.utils.SectionType;
 
-public class House implements java.io.Serializable {
+public class House implements java.io.Serializable{
 
-    private static Long counter = 0L; 
-
-    private Long id;
     private String name;
     private IUser owner;
     private Map<SectionType, ISection> sections;
 
-    public House(IUser owner){
+    public House(IUser owner, String name){
         this.owner = owner;
-        this.id = counter;
-        this.name = "Casa";
+        this.name = name;
         this.sections = makeSections();
-
-        counter++;
     }
 
-    public House(IUser owner, String name, Long id, Map<SectionType, ISection> sections){
-        this.owner = owner;
-        this.id = id;
-        this.name = name;
-        this.sections = sections;
+    public House(House original){
+        this.owner = original.owner;
+        this.name = original.name;
+        this.sections = makeSections();
+        for (ISection s : original.getSections().values()){
+            this.sections.put(s.getType(), new Section(s));
+        }
     }
 
 
@@ -42,12 +38,8 @@ public class House implements java.io.Serializable {
         return map;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public String getId() {
+        return name;
     }
 
     public String getName() {
@@ -108,7 +100,7 @@ public class House implements java.io.Serializable {
 
     @Override
     public String toString(){
-        String houseString = "House [id=" + id + ", name=" + name + ", owner=" + owner.getUserId() + "]";
+        String houseString = "House [name=" + name + ", owner=" + owner.getUserId() + "]";
         for (SectionType type: this.getSections().keySet()){
             houseString += "\n  Section " + type + ":";
             for (Device d: this.getSections().get(type).getDevices()){

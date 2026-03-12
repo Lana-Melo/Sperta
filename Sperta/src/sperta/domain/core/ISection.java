@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import sperta.utils.SectionType;
 
-public interface ISection extends java.io.Serializable {
+public interface ISection extends java.io.Serializable{
 
     Long getContador();
 

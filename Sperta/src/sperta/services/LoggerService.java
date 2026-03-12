@@ -11,11 +11,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.utils.LogEntry;
 import sperta.utils.Operation;
+import sperta.utils.SectionType;
 
 /**
  * Class to help with LoggingServices related to SpertaServer
@@ -51,9 +53,16 @@ public class LoggerService {
      * @throws IOException
      */
     public List<String> getLastOperationsOfHouse(House house) throws IOException {
+        List<SectionType> sections = Stream.of(SectionType.values()).toList(); //get all sections
+        return getLastOperationsOfHouseBySection(house, sections);
+    }
+
+    public List<String> getLastOperationsOfHouseBySection(House house, List<SectionType> sections) throws IOException {
         List<String> logs = new ArrayList<>();
         Path housePath = determineHousePath(house);
+        List<String> sCodes = sections.stream().map(SectionType::getLabel).toList();
         for (File fileType : housePath.toFile().listFiles()){
+            if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
             for (File file : fileType.listFiles()){
                 if (file.getName().endsWith(".csv")){
                     logs.add(readLastLineOfLog(file.toPath()));
@@ -76,6 +85,7 @@ public class LoggerService {
         //TODO: Esta função está muito simples. Só se pode dar ao utilizador o histórico de dados a que ele tem permissão!
         //Talvez seria boa ideia dividir o getAllDeviceHistory por funções relativas a cada Secção e não a todas as secções
     }
+
 
     /**
      * Correctly determines House path, assuming log points to a valid house

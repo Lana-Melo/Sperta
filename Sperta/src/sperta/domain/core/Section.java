@@ -1,6 +1,7 @@
 package sperta.domain.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +22,15 @@ public class Section implements ISection{
         this.contador = contador;
         this.devices = new ArrayList<>();
         this.mantainers = mantainers;
+    }
+
+    public Section(ISection original){
+        this.type = original.getType();
+        this.contador = original.getContador();
+        this.devices = new ArrayList<>();
+        this.mantainers = new HashMap<>();
+        for (Device d : original.getDevices()){devices.add(new Device(d));}
+        for (String uId : original.getMantainers().keySet()){this.mantainers.put(uId, new User(this.mantainers.get(uId)));}
     }
 
     public Long getContador() {

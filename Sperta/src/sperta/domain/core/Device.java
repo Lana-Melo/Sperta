@@ -24,6 +24,12 @@ public class Device  implements java.io.Serializable {
         this.state = state;
     }
 
+    Device(Device original){
+        this.id = original.getId();
+        this.type = original.getType();
+        this.state = original.getState();
+    }
+
     public Long getId() {
         return id;
     }
