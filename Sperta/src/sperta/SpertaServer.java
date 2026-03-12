@@ -115,18 +115,15 @@ public class SpertaServer {
         IUser user2 = new User("Sofia", "4321");
         IUser user3 = new User("Lana", "5678");
 
-        House home1 = new House(user1);
-        home1.setName("Casa do Guilherme");
-        House home2 = new House(user2);
-        home2.setName("Casa da Sofia");
-        House home3 = new House(user3);
-        home3.setName("Casa da Lana");
+        House home1 = new House(user1, "Casa do Guilherme");
+        House home2 = new House(user2, "Casa da Sofia");
+        House home3 = new House(user3, "Casa da Lana");
 
         home1.addDevice(SectionType.ELECTROS);
         home2.addDevice(SectionType.GARDEN);
         home3.addDevice(SectionType.LUZES);
 
-        Map<Long, House> mockHomesMap = new HashMap<>();
+        Map<String, House> mockHomesMap = new HashMap<>();
 
         mockHomesMap.put(home1.getId(), home1);
         mockHomesMap.put(home2.getId(), home2);

@@ -76,6 +76,7 @@ public class Controller extends Thread{
                 outStream.flush();
                 if (jarSize != jarExpectedSize) socket.close();
         }
+
         /**
          * 
          * @param outStream
@@ -225,7 +226,7 @@ public class Controller extends Thread{
                 // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 
-                House house = new House(currUser);
+                House house = new House(currUser, hm);
                 //nome da casa?
                 
                 outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);

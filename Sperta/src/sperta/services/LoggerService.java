@@ -63,9 +63,10 @@ public class LoggerService {
         List<String> sCodes = sections.stream().map(SectionType::getLabel).toList();
         for (File fileType : housePath.toFile().listFiles()){
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
+            logs.add("For section " + fileType.getName());
             for (File file : fileType.listFiles()){
                 if (file.getName().endsWith(".csv")){
-                    logs.add(readLastLineOfLog(file.toPath()));
+                    logs.add(file.getName() + ": " + readLastLineOfLog(file.toPath()));
                 }
             }
         }
@@ -85,7 +86,6 @@ public class LoggerService {
         //TODO: Esta função está muito simples. Só se pode dar ao utilizador o histórico de dados a que ele tem permissão!
         //Talvez seria boa ideia dividir o getAllDeviceHistory por funções relativas a cada Secção e não a todas as secções
     }
-
 
     /**
      * Correctly determines House path, assuming log points to a valid house
