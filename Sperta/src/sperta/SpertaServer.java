@@ -7,19 +7,25 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import sperta.domain.Controller;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
 import sperta.domain.core.User;
+import sperta.services.Repository;
 import sperta.utils.Persistence;
 import sperta.utils.SectionType;
 
 public class SpertaServer {
 
-    private Map<String, IUser> bkpUsersCatalog = new HashMap<>();
-    private Map<Long, House> bkpHomesCatalog = new HashMap<>();
-    
+    private final ExecutorService pool = java.util.concurrent.Executors.newCachedThreadPool();
+    private final Map<String, IUser> bkpUsersCatalog = new HashMap<>();
+    private final Map<String, House> bkpHomesCatalog = new HashMap<>();
+    private static boolean running;
+    private static final Repository repository = Repository.INSTANCE;
     private static final int DEFAULT_PORT_NUMBER = 22345;
+
 
     public static void main(String[] args) {
         System.out.println("Starting Sperta Server...\n");
@@ -27,13 +33,12 @@ public class SpertaServer {
         int port = server.getPortNumber(args);
         
         // remover depois
-        cadastraUsersMock();
-        cadastraHomesMock();
+        //cadastraUsersMock();
+        //cadastraHomesMock();
         // remover depois
 
         server.executeBackup();
-
-		//server.startServer(port);
+		server.startServer(port);
     }
 
     /** 
@@ -64,27 +69,40 @@ public class SpertaServer {
      * @param port the port number to listen on
      */
     private void startServer(int port) {
-        ServerSocket sSoc = null;
-        
-		try {
-			sSoc = new ServerSocket(port);
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			System.exit(-1);
+        running = true;
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+
+		try (ServerSocket sSoc = new ServerSocket(port)) {   
+            while(running){
+                try (Socket clienSocket = sSoc.accept()) {
+                    pool.execute(new Controller(clienSocket));
+		        } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+		    e.printStackTrace();
 		}
-         
-		while(true) {
-			try {
-				Socket inSoc = sSoc.accept();
-                Controller newServerThread = new Controller(inSoc);
-				newServerThread.start(); // Keep in mind: this call executes the thread.run()
-		    }
-		    catch (IOException e) {
-		        e.printStackTrace();
-		    }
-		}
+    
     }
 
+    private void shutdown(){
+        System.out.println("\nShutting down the server...");
+        running = false;
+        pool.shutdown();
+        try {
+            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+            pool.shutdownNow();
+            if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+                System.err.println("Pool did not terminate");
+            }
+        } catch (InterruptedException ie) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        System.out.println("Persisting data...");
+        repository.persist();
+    }
     /**
      * Method to determine the port number to be used by the server. 
      * If no port number is given as an argument, or the given port number is invalid, uses the default port number.
@@ -105,8 +123,6 @@ public class SpertaServer {
         return port;
     }
 
-
-
     // APAGAR DEPOIS ESTE DOIS MÉTODOS DE MOCK, SÃO APENAS PARA TESTE
     private static void cadastraHomesMock() {
         System.out.println("creating mock homes...");
@@ -126,11 +142,11 @@ public class SpertaServer {
         home2.addDevice(SectionType.GARDEN);
         home3.addDevice(SectionType.LUZES);
 
-        Map<Long, House> mockHomesMap = new HashMap<>();
+        Map<String, House> mockHomesMap = new HashMap<>();
 
-        mockHomesMap.put(home1.getId(), home1);
-        mockHomesMap.put(home2.getId(), home2);
-        mockHomesMap.put(home3.getId(), home3);
+        mockHomesMap.put(home1.getName(), home1);
+        mockHomesMap.put(home2.getName(), home2);
+        mockHomesMap.put(home3.getName(), home3);
 
         try (ObjectOutputStream out =
                 new ObjectOutputStream(new FileOutputStream("./data/homes.txt"))) {

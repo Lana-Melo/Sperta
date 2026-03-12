@@ -31,7 +31,6 @@ public class House implements java.io.Serializable {
         this.sections = sections;
     }
 
-
     private Map<SectionType, ISection> makeSections(){
         Map<SectionType, ISection> map = new EnumMap<>(SectionType.class);
         for (SectionType type: SectionType.values()){
