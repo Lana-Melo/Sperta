@@ -1,12 +1,17 @@
 package sperta.services;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
+import sperta.domain.core.House;
 import sperta.domain.core.ISection;
+import sperta.domain.core.IUser;
 import sperta.utils.LogEntry;
 import sperta.utils.Operation;
+import sperta.utils.SectionType;
 
 public class SecurityService {
 
@@ -38,4 +43,18 @@ public class SecurityService {
 
         return false;
     }
+
+    /**
+     * Returns the types of sections that user has access over in the given house
+     * @param h
+     * @param u
+     * @return
+     */
+    public List<SectionType> getUserAccessibleSectionTypes(House h, IUser u){
+        return h.getSections().values().stream()
+                .filter(section -> section.hasMantainer(u))
+                .map(s -> s.getType())
+                .toList();
+    }
+
 }

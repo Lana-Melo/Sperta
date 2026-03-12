@@ -1,8 +1,8 @@
 package sperta.domain.core;
 
 public abstract class AUser implements IUser {
-    private String userId;
-    private String password;
+    protected String userId;
+    protected String password;
 
     public String getUserId() {
         return userId;

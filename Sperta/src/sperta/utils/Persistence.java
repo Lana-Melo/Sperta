@@ -7,7 +7,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class Persistence {
     /**
@@ -47,6 +51,14 @@ public class Persistence {
         } catch (IOException e) {
             e.printStackTrace();
         }  
+    }
+
+    public static void createLogFiles(String filepath) throws IOException{
+        Files.createDirectory(Paths.get(filepath)); //create home dir
+        for (SectionType sType : Stream.of(SectionType.values()).toList()){
+            if (sType.equals(SectionType.ALL)) continue;
+            Files.createDirectory(Paths.get(filepath + "/" + sType.getLabel())); //create dir for every Section Type
+        }
     }
 
 }

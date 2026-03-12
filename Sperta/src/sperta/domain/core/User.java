@@ -10,6 +10,11 @@ public class User extends AUser{
         this.setUserId(id);
     }
 
+    public User(IUser original){
+        this.password = original.getPassword();
+        this.userId = original.getUserId();
+    }
+
     @Override
     public String toString() {
         return "User [userId=" + this.getUserId() + "]";
