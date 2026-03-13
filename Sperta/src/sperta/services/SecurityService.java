@@ -17,7 +17,7 @@ public class SecurityService {
             Operation.RD
         ));
 
-    public boolean checkUserActionPermissions(LogEntry log){
+    public static boolean checkUserActionPermissions(LogEntry log){
         //create, add and register device
         if (log.getHouse().getOwner().equals(log.getUser())) return true; //checks if it's owner
         if (OWNER_OPERATIONS.contains(log.getOperation())) return false; //checks if a non-user is trying to do a owner action

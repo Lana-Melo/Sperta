@@ -15,4 +15,17 @@ public enum SectionType {
             default: throw new IllegalStateException();
         }
     }
+
+    public SectionType getEnum(String label){
+        switch (label) {
+            case "E": return  ELECTROS;
+            case "G": return GARDEN;
+            case "L": return LUZES;
+            case "M": return MULTIMEDIA;
+            case "P": return PORTAS;
+            case "S": return STORES;
+            case "all": return ALL;
+            default: throw new IllegalStateException();
+        }
+        }
 }

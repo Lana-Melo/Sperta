@@ -6,13 +6,17 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.time.LocalDateTime;
 
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
 import sperta.domain.core.User;
 import sperta.services.Repository;
+import sperta.services.SecurityService;
+import sperta.utils.LogEntry;
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
+import sperta.utils.SectionType;
 
 public class Controller extends Thread{
 
@@ -24,28 +28,34 @@ public class Controller extends Thread{
         }
         public void run(){
         // TODO: all the interaction with the client (Sofia's task)
-                try {
-                        ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-                        ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
-                        //atestar 
-                        attest(outStream, inStream);
+                //Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+                //fazer o shutdown gracioso q vai fechar a socket 
+                while(true){
+                        try {
+                                ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+                                ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
-                        //autenticar 
-                        authenticate(outStream, inStream);
+                                //atestar 
+                                attest(outStream, inStream);
 
-                        //loop comandos 
-                        operations(outStream, inStream);
+                                //autenticar 
+                                authenticate(outStream, inStream);
+
+                                //loop comandos 
+                                operations(outStream, inStream);
 
 
-                        outStream.close();
-                        inStream.close();
+                                outStream.close();
+                                inStream.close();
 
-                        socket.close();
+                                socket.close();
 
-                } catch (IOException  | ClassNotFoundException e) {
-                        e.printStackTrace();
+                        } catch (IOException  | ClassNotFoundException e) {
+                                e.printStackTrace();
+                        }
                 }
+                        
 
         }
         /**
@@ -128,17 +138,17 @@ public class Controller extends Thread{
                 while (true) {
                         ope=null; //por agora  ope = in.readObject
                         switch (ope) {
-                                case CREATE -> create(outStream, inStream);
-                                case ADD    -> add(outStream, inStream);
-                                case RD     -> rd(outStream, inStream);
-                                case EC     -> ec(outStream, inStream);
-                                case RT     -> rt(outStream, inStream);
-                                case RH     -> rh(outStream, inStream);
+                                case CREATE -> create(outStream, inStream, ope);
+                                case ADD    -> add(outStream, inStream, ope);
+                                case RD     -> rd(outStream, inStream, ope);
+                                case EC     -> ec(outStream, inStream, ope);
+                                case RT     -> rt(outStream, inStream, ope);
+                                case RH     -> rh(outStream, inStream, ope);
                                 //acho q n preciso de default pk o cliente envia sempre à partida um enum 
                         }
                 }
         }
-        private Object rh(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private Object rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 String d = (String) inStream.readObject();
@@ -146,39 +156,67 @@ public class Controller extends Thread{
                 
                 throw new UnsupportedOperationException("Unimplemented method 'rh'");
         }
-        private Object rt(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
+                
                 String hm = (String) inStream.readObject();
+
+                House repo_hnm = Repository.INSTANCE.getHouseById(hm);
+                
                 
 
 
                 throw new UnsupportedOperationException("Unimplemented method 'rt'");
         }
-        private Object ec(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 String d = (String) inStream.readObject();
                 String value = (String) inStream.readObject();
+                
+                House repo_hm = Repository.INSTANCE.getHouseById(hm);
+                if(repo_hm == null){
+                        outStream.writeObject(MessageCodes.NOHM); 
+                        return;
+                }
+
+                repo_hm.getDeviceFromSectionById(null, getEnum())
+
                 /**
                  * atualizar 
                  */
                 throw new UnsupportedOperationException("Unimplemented method 'ec'");
         }
-        private Object rd(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private void rd(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 String s = (String) inStream.readObject();
 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
-                if(repo_hm == null) outStream.writeObject(MessageCodes.NOHM); //home n existe 
+                if(repo_hm == null){
+                        outStream.writeObject(MessageCodes.NOHM); 
+                        return;
+                }//home n existe 
 
                 //agora quero ver se o currUser pode fazer rd
                 //se ele n é dono n pode  checkUserActionPermissions
 
+                LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
+                if(SecurityService.checkUserActionPermissions(log)== false) {
+                        outStream.writeObject(MessageCodes.NOPERM);
+                        return;
+                }
+
+                repo_hm.addDevice(SectionType.getEnum(s));
+                outStream.writeObject(MessageCodes.OK);
+                outStream.flush();
+
                 //Fazer novo construtor no log q passo o enum da operation e a string toda
                 //depois chamo esse construtor, monta o log e é esse log q eu depois passo pra security service
-                
 
+
+                
+                
                 //else regista dispositivo na casa na secção e outStream.writeObject(MessageCodes.OK);
 
 
@@ -192,7 +230,7 @@ public class Controller extends Thread{
                  */
                 throw new UnsupportedOperationException("Unimplemented method 'rd'");
         }
-        private void add(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
                 String user = (String) inStream.readObject();
                 String hm = (String) inStream.readObject();
@@ -200,11 +238,31 @@ public class Controller extends Thread{
 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 IUser repo_user = Repository.INSTANCE.getUserById(user);
-                if(repo_user== null) outStream.writeObject(MessageCodes.NOUSER); //user n existe 
-                if( repo_hm == null) outStream.writeObject(MessageCodes.NOHM); //home n existe 
+                if(repo_user== null) {
+                        outStream.writeObject(MessageCodes.NOUSER);
+                        return;
+                }
+                
+                if(repo_hm == null) {
+                        outStream.writeObject(MessageCodes.NOHM);
+                        return;
+                }
                 
                 //agora quero ver se o currUser pode fazer add
                 //se ele n é dono n pode  checkUserActionPermissions
+
+                LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
+                if(SecurityService.checkUserActionPermissions(log)== false) {
+                        outStream.writeObject(MessageCodes.NOPERM);
+                        return;
+                }
+
+                repo_hm.addMantainerToSection(repo_user, SectionType.getEnum(s));
+                outStream.writeObject(MessageCodes.OK);
+                outStream.flush();
+
+
+
 
                 //else  adiciono user à secção e outStream.writeObject(MessageCodes.OK); 
                 //outStream.flush();
@@ -221,11 +279,11 @@ public class Controller extends Thread{
                  * 
                  */
         }
-        private void create(ObjectOutputStream outStream, ObjectInputStream inStream) throws ClassNotFoundException, IOException {
+        private void create(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 
-                House house = new House(currUser);
+                House house = new House(currUser, hm);
                 //nome da casa?
                 
                 outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);

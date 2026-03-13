@@ -32,7 +32,7 @@ public class LogEntry {
     private Device device;
     private Integer devicesValue;
 
-    LogEntry(LocalDateTime timestamp, IUser user, Operation op, House house){
+    public LogEntry(LocalDateTime timestamp, IUser user, Operation op, House house){
         this.timestamp = timestamp;
         this.user = user;
         this.operation = op;
