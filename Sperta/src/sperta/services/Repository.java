@@ -23,6 +23,11 @@ public enum Repository {
         Persistence.load("./data/homes.txt", homeCatalog);
     }
 
+    public void persist() {
+        Persistence.persist("./data/users.txt", userCatalog);
+        Persistence.persist("./data/homes.txt", homeCatalog); 
+    }
+
     // ==================================================
     // CRUD operations for users
     // ==================================================
@@ -60,7 +65,6 @@ public enum Repository {
             homeCatalog.remove(house.getId());
             return false;
         }
-
         return true;
     }
 
@@ -70,5 +74,4 @@ public enum Repository {
         }
         return homeCatalog.get(houseId);
     }
-
 }

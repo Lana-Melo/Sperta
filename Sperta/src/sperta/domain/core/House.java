@@ -27,7 +27,6 @@ public class House implements java.io.Serializable{
         }
     }
 
-
     private Map<SectionType, ISection> makeSections(){
         Map<SectionType, ISection> map = new EnumMap<>(SectionType.class);
         for (SectionType type: SectionType.values()){
@@ -39,7 +38,7 @@ public class House implements java.io.Serializable{
     }
 
     public String getId() {
-        return name;
+        return getName(); //At this time, the house's id is it's name
     }
 
     public String getName() {
