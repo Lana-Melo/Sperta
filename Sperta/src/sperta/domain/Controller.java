@@ -7,10 +7,12 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
 import sperta.domain.core.User;
+import sperta.services.LoggerService;
 import sperta.services.Repository;
 import sperta.services.SecurityService;
 import sperta.utils.LogEntry;
@@ -31,7 +33,7 @@ public class Controller extends Thread{
 
                 //Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
                 //fazer o shutdown gracioso q vai fechar a socket 
-                while(true){
+
                         try {
                                 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
                                 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
@@ -54,7 +56,7 @@ public class Controller extends Thread{
                         } catch (IOException  | ClassNotFoundException e) {
                                 e.printStackTrace();
                         }
-                }
+                
                         
 
         }
@@ -137,7 +139,7 @@ public class Controller extends Thread{
 
                 Operation ope;
                 while (true) {
-                        ope=null; //por agora  ope = in.readObject
+                        ope = (Operation) inStream.readObject(); 
                         switch (ope) {
                                 case CREATE -> create(outStream, inStream, ope);
                                 case ADD    -> add(outStream, inStream, ope);
@@ -158,135 +160,100 @@ public class Controller extends Thread{
                 throw new UnsupportedOperationException("Unimplemented method 'rh'");
         }
         private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
-                // TODO Auto-generated method stub
-                
                 String hm = (String) inStream.readObject();
 
-                House repo_hnm = Repository.INSTANCE.getHouseById(hm);
-                
-                
+                House repo_hm = Repository.INSTANCE.getHouseById(hm);
+                if(repo_hm == null){ outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;}
 
+                LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
+                if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return;}
+                
+                List<String> logs = new LoggerService().getLastOperationsOfHouse(repo_hm);
+                byte[] data = String.join("\n", logs).getBytes();
+                outStream.writeObject(MessageCodes.OK);
+                outStream.writeObject((long) data.length);
+                outStream.write(data);
+                outStream.flush();
 
-                throw new UnsupportedOperationException("Unimplemented method 'rt'");
         }
         private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
-                // TODO Auto-generated method stub
+                
                 String hm = (String) inStream.readObject();
                 String d = (String) inStream.readObject();
                 String value = (String) inStream.readObject();
                 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
-                if(repo_hm == null){
-                        outStream.writeObject(MessageCodes.NOHM); 
-                        return;
-                }
+                if(repo_hm == null){ outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;}
+
+                //procurar device por id 
+                //se n encontar NOD
 
                 repo_hm.getDeviceFromSectionById(null, getEnum())
 
-                /**
-                 * atualizar 
-                 */
-                throw new UnsupportedOperationException("Unimplemented method 'ec'");
         }
+
+        /**
+         * 
+         * @param outStream
+         * @param inStream
+         * @param ope
+         * @throws ClassNotFoundException
+         * @throws IOException
+         */
         private void rd(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
-                // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
                 String s = (String) inStream.readObject();
 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
-                if(repo_hm == null){
-                        outStream.writeObject(MessageCodes.NOHM); 
-                        return;
-                }//home n existe 
-
-                //agora quero ver se o currUser pode fazer rd
-                //se ele n é dono n pode  checkUserActionPermissions
+                if(repo_hm == null){ outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;} 
 
                 LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
-                if(SecurityService.checkUserActionPermissions(log)== false) {
-                        outStream.writeObject(MessageCodes.NOPERM);
-                        return;
-                }
+                if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return;}
 
-                repo_hm.addDevice(SectionType.getEnum(s));
+                repo_hm.addDevice(SectionType.ALL.getEnum(s));
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
 
-                //Fazer novo construtor no log q passo o enum da operation e a string toda
-                //depois chamo esse construtor, monta o log e é esse log q eu depois passo pra security service
-
-
-                
-                
-                //else regista dispositivo na casa na secção e outStream.writeObject(MessageCodes.OK);
-
-
-                
-
-                /**
-                 * ler as coisinhas lalal
-                 * procurar a casa 
-                 * ver se o user é o dono 
-                 * adicionar device à secção
-                 */
-                throw new UnsupportedOperationException("Unimplemented method 'rd'");
         }
+
+        /**
+         * 
+         * @param outStream
+         * @param inStream
+         * @param ope
+         * @throws ClassNotFoundException
+         * @throws IOException
+         */
         private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
-                // TODO Auto-generated method stub
                 String user = (String) inStream.readObject();
                 String hm = (String) inStream.readObject();
                 String s = (String) inStream.readObject();
 
-                House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 IUser repo_user = Repository.INSTANCE.getUserById(user);
-                if(repo_user== null) {
-                        outStream.writeObject(MessageCodes.NOUSER);
-                        return;
-                }
-                
-                if(repo_hm == null) {
-                        outStream.writeObject(MessageCodes.NOHM);
-                        return;
-                }
-                
-                //agora quero ver se o currUser pode fazer add
-                //se ele n é dono n pode  checkUserActionPermissions
+                if (repo_user == null) { outStream.writeObject(MessageCodes.NOUSER); outStream.flush(); return;}
 
+                House repo_hm = Repository.INSTANCE.getHouseById(hm);
+                if(repo_hm == null) { outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;}
+                
                 LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
-                if(SecurityService.checkUserActionPermissions(log)== false) {
-                        outStream.writeObject(MessageCodes.NOPERM);
-                        return;
-                }
+                if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); return;}
 
-                repo_hm.addMantainerToSection(repo_user, SectionType.getEnum(s));
+                repo_hm.addMantainerToSection(repo_user, SectionType.ALL.getEnum(s));
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
 
-
-
-
-                //else  adiciono user à secção e outStream.writeObject(MessageCodes.OK); 
-                //outStream.flush();
-                
-
-                /**
-                 * vou procurar pelo user no repo 
-                 * se nao existir msg de n existe user NOUSER
-                 * 
-                 * vou procurar pela casa no repo o id é a string hm??? getHouseById
-                 * se nao existir enum de n existe essa casa 
-                 * 
-                 * depois vejo as permissões pra ver se user pode fazer add
-                 * 
-                 */
         }
+        /**
+         * 
+         * @param outStream
+         * @param inStream
+         * @param ope
+         * @throws ClassNotFoundException
+         * @throws IOException
+         */
         private void create(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
-                // TODO Auto-generated method stub
                 String hm = (String) inStream.readObject();
-                
                 House house = new House(currUser, hm);
-                //nome da casa?
-                
                 outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);
                 outStream.flush();
         }
