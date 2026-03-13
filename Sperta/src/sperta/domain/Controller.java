@@ -1,6 +1,7 @@
 package sperta.domain;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -55,6 +56,8 @@ public class Controller extends Thread{
                                 inStream.close();
 
                                 socket.close();
+                                
+                        } catch (EOFException e) {
 
                         } catch (IOException  | ClassNotFoundException e) {
                                 e.printStackTrace();
