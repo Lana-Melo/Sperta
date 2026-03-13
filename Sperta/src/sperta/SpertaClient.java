@@ -121,6 +121,7 @@ public class SpertaClient {
     private static void userInteraction(ObjectOutputStream out, ObjectInputStream in) throws Exception {
         Scanner sc = new Scanner(System.in);
         commands();
+        System.out.print("Command:");
         while(sc.hasNextLine()){
             String line = sc.nextLine().trim();
             if (line.isEmpty()) continue; //pra n fazer split de uma line vazia 
@@ -135,6 +136,7 @@ public class SpertaClient {
                 case "help"   -> commands();
                 default       -> System.out.println("Invalid command. Type 'help'.");
             }
+            System.out.print("Command:");
         }
         sc.close();
     }
@@ -152,7 +154,7 @@ public class SpertaClient {
         out.writeObject(Operation.CREATE);
         out.writeObject(parts[1]); //<hm>
         out.flush();
-        System.out.println(in.readObject());
+        System.out.println("Response: " + in.readObject());
     }
     /**
      * Sends an ADD request to add a user to a house section.
@@ -170,7 +172,7 @@ public class SpertaClient {
         out.writeObject(parts[2]);  // <hm>
         out.writeObject(parts[3]);  // <s>
         out.flush();
-        System.out.println(in.readObject());
+        System.out.println("Response: " + in.readObject());
     }
     /**
      * Sends an RD request to register a device in a house section.
@@ -187,7 +189,7 @@ public class SpertaClient {
         out.writeObject(parts[1]);  // <hm> 
         out.writeObject(parts[2]);  // <s>
         out.flush();
-        System.out.println(in.readObject());
+        System.out.println("Response: " + in.readObject());
 
     }
     /**
@@ -206,7 +208,7 @@ public class SpertaClient {
         out.writeObject(parts[2]);  // <d>
         out.writeObject(parts[3]); // <int>
         out.flush();
-        System.out.println(in.readObject());
+        System.out.println("Response: " + in.readObject());
     }
     /**
      * Sends an RT request and saves the last state of all devices in a house.
@@ -224,7 +226,7 @@ public class SpertaClient {
         out.flush();
 
         MessageCodes server_response = (MessageCodes) in.readObject();
-        System.out.println(server_response);
+        System.out.println("Response: " + server_response);
         if (server_response != MessageCodes.OK) return;
         generateFile(in, "RT_" + parts[1] + ".txt");
     }
@@ -245,7 +247,7 @@ public class SpertaClient {
         out.flush();
 
         MessageCodes server_response = (MessageCodes) in.readObject();
-        System.out.println(server_response);
+        System.out.println("Response: " + server_response);
         if (server_response != MessageCodes.OK) return;
         generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv");
     }
