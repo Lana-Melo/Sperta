@@ -74,11 +74,9 @@ public class SpertaServer {
 
 		try (ServerSocket sSoc = new ServerSocket(port)) {   
             while(running){
-                try (Socket clienSocket = sSoc.accept()) {
-                    pool.execute(new Controller(clienSocket));
-		        } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                Socket clienSocket = sSoc.accept();
+                pool.execute(new Controller(clienSocket));
+
             }
         } catch (IOException e) {
 		    e.printStackTrace();

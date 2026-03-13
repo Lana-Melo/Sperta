@@ -24,6 +24,11 @@ public class SpertaClient {
          * SpertaClient <serverAddress> <user-id> <password>
          * 
          */
+        if (args.length < 3) {
+            System.out.println("Usage: SpertaClient <serverAddress> <user-id> <password>");
+            System.exit(0);
+        }
+        
         try {
             String user = args[1];
             String pass = args[2];
@@ -56,7 +61,8 @@ public class SpertaClient {
     //jar length ainda tenho de pensar como fazer isto, por enquanto mandamos 0          //ATTENTION PLEASE :)
     //ainda n atesta coisa alguma 
     //como é q o cliente sabe o proprio tamanho ???
-        out.writeObject(0);
+        long jarSize = new File(SpertaClient.class.getProtectionDomain().getCodeSource().getLocation().toURI()).length();
+        out.writeObject((int) jarSize);
         out.flush();
         MessageCodes server_response = (MessageCodes) in.readObject();
         if (server_response == (MessageCodes.OK)) {
@@ -90,7 +96,6 @@ public class SpertaClient {
         } while (server_response == (MessageCodes.WRONG_PWD));
 
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");
-        sc.close();
     }
     /**
      * Prints available commands to the user.

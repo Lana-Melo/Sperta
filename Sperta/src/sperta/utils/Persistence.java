@@ -36,6 +36,7 @@ public class Persistence {
     }
 
     private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest) {
+        if (file.length() == 0) return;
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();

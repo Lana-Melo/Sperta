@@ -83,7 +83,7 @@ public class Controller extends Thread{
                 int bytesRead = input.read(buffer);
 
                 String line = new String(buffer, 0, bytesRead).trim(); //vou buscar o q esta no file txt
-                String[] parts = line.split(":");
+                String[] parts = line.split(":");                       
                 int jarExpectedSize = Integer.parseInt(parts[1]);  
                 input.close();
                 
