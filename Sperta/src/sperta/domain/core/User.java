@@ -20,4 +20,11 @@ public class User extends AUser{
         return "User [userId=" + this.getUserId() + "]";
 
     }
+
+    @Override
+    public boolean equals(Object o){
+        if (o == null || !o.getClass().equals(this.getClass())) return false;
+        User other = (User) o;
+        return other.getUserId().equals(this.getUserId());
+    }
 }

@@ -41,9 +41,7 @@ public class LoggerService {
         Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
         writeLogToFile(houseLogPath , log);
         if (log.getOperation().equals(Operation.EC) || log.getOperation().equals(Operation.RD)){
-            System.out.println("Cai no if");
             Path devicePath = determineDevicePath(log, DATA_PATH);
-            System.out.println(devicePath);
             writeCsvLogToFile(devicePath, log);
         }
     }
@@ -165,7 +163,7 @@ public class LoggerService {
      */
     private void writeLogToFile(Path p, LogEntry log) throws IOException{
         if (!Files.exists(p)) Files.createFile(p); 
-        FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file 
+        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
         fos.write(log.toString().getBytes());  //DESCOBRIR METODO Q ESCREVE NO FIM DO FICHEIRO 
         fos.close();
     }

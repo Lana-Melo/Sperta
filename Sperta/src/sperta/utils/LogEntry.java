@@ -113,11 +113,12 @@ public class LogEntry {
             .append(timestamp.toString()).append(",")
             .append(user.toString()).append(",")
             .append(operation.toString()).append(",")
-            .append(house.toString()).append(",")
+            .append(house.getName()).append(",")
             .append(addedUser).append(",")
             .append(sectionType).append(",")
             .append(device).append(",")
             .append(devicesValue)
+            .append("\n")
             .toString();
     }
 

@@ -40,8 +40,10 @@ public class SpertaClient {
             Socket clientSocket = new Socket(host, port);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+            System.out.println("HEllow world");
             // atestar
             attestation(out, in, clientSocket);
+
             // autenticar
             autentication(out, in, user, pass);
             // loop comandos

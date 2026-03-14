@@ -347,13 +347,15 @@ public class Controller extends Thread{
                 String hm = (String) inStream.readObject();
                 String s = (String) inStream.readObject();
 
+                if (!s.equals("all") && s.length() > 1) outStream.writeObject(MessageCodes.NOK);
+
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 if(repo_hm == null){ outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;} 
 
                 LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
                 if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return;}
 
-                Device repoDevice = repo_hm.addDevice(SectionType.ALL.getEnum(s));
+                Device repoDevice = repo_hm.addDevice(SectionType.ALL.getEnum(s.toUpperCase()));
                 log.setDevice(repoDevice);
                 Persistence.createDeviceLogFile(repo_hm, repoDevice);
                 System.out.println("Antes de log");
