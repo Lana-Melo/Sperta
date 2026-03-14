@@ -69,8 +69,8 @@ public class House implements java.io.Serializable{
         this.sections = sections;
     }
 
-    public void addDevice(SectionType type){
-        this.getSections().get(type).addDevice();
+    public Device addDevice(SectionType type){
+        return this.getSections().get(type).addDevice();
     }
 
     public void addDevicesOfType(int n, SectionType type){

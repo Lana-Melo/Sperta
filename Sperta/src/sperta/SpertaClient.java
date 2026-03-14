@@ -5,7 +5,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Scanner;
 
 import sperta.utils.MessageCodes;
@@ -46,6 +48,10 @@ public class SpertaClient {
             userInteraction(out, in);
 
             clientSocket.close();
+
+        } catch(ConnectException e){
+            System.err.println("Server Not Running");
+        
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -122,21 +128,25 @@ public class SpertaClient {
         Scanner sc = new Scanner(System.in);
         commands();
         System.out.print("Command:");
-        while(sc.hasNextLine()){
-            String line = sc.nextLine().trim();
-            if (line.isEmpty()) continue; //pra n fazer split de uma line vazia 
-            String[] parts = line.split("\\s+");
-            switch (parts[0]) {
-                case "CREATE" -> createHouse(parts,out, in);
-                case "ADD"    -> addUser(parts, out, in);
-                case "RD"     -> registerDevice(parts, out, in);
-                case "EC"     -> sendCommand(parts, out, in);
-                case "RT"     -> receiveLastState(parts, out, in);
-                case "RH"     -> receiveHistory(parts, out, in);
-                case "help"   -> commands();
-                default       -> System.out.println("Invalid command. Type 'help'.");
+        try{
+            while(sc.hasNextLine()){
+                String line = sc.nextLine().trim();
+                if (line.isEmpty()) continue; //pra n fazer split de uma line vazia 
+                String[] parts = line.split("\\s+");
+                switch (parts[0]) {
+                    case "CREATE" -> createHouse(parts,out, in);
+                    case "ADD"    -> addUser(parts, out, in);
+                    case "RD"     -> registerDevice(parts, out, in);
+                    case "EC"     -> sendCommand(parts, out, in);
+                    case "RT"     -> receiveLastState(parts, out, in);
+                    case "RH"     -> receiveHistory(parts, out, in);
+                    case "help"   -> commands();
+                    default       -> System.out.println("Invalid command. Type 'help'.");
+                }
+                System.out.print("Command:");
             }
-            System.out.print("Command:");
+        } catch (SocketException e) {
+            System.err.println("Server disconnected!");
         }
         sc.close();
     }

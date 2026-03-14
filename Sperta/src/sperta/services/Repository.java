@@ -54,13 +54,14 @@ public enum Repository {
     public boolean addHouse(House house) {
         synchronized (homeLock) {
             if (homeCatalog.containsKey(house.getId())) {
+                System.out.println("Já tem casa");
                 return false;
             }
             homeCatalog.put(house.getId(), house);
         }
 
         try { // If creating the files wasn't possible, the operation fails
-            Persistence.createLogFiles(HOUSE_PATH + "/" + house.getName());
+            Persistence.createLogFiles(HOUSE_PATH + "/" + house.getName(), house.getName());
         } catch (IOException e){
             homeCatalog.remove(house.getId());
             return false;

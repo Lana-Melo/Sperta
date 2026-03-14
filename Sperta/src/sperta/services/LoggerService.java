@@ -28,7 +28,7 @@ import sperta.utils.SectionType;
  * 
  */
 public class LoggerService {
-    private static final String DATA_PATH = "../../data/houses";
+    private static final String DATA_PATH = "data/houses";
 
     /**
      * Writes log to respective files, if a file doesn't exist, creates it
@@ -38,10 +38,12 @@ public class LoggerService {
      * @throws IOException
      */
     public void insertLog(LogEntry log) throws IOException { 
-        Path housePath = determineHousePath(log);
-        writeLogToFile(housePath, log);
+        Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
+        writeLogToFile(houseLogPath , log);
         if (log.getOperation().equals(Operation.EC) || log.getOperation().equals(Operation.RD)){
+            System.out.println("Cai no if");
             Path devicePath = determineDevicePath(log, DATA_PATH);
+            System.out.println(devicePath);
             writeCsvLogToFile(devicePath, log);
         }
     }
@@ -96,7 +98,7 @@ public class LoggerService {
         return determineHousePath(log.getHouse());
     }
 
-    private Path determineHousePath(House home) {
+    public Path determineHousePath(House home) {
         for (File file : new File(DATA_PATH).listFiles()){
             if (file.getName().equals(home.getName())){
                 return Paths.get(
@@ -118,7 +120,7 @@ public class LoggerService {
      * @return
      */
     private Path determineDevicePath(LogEntry log, String housePath){
-        return determineDevicePath(log.getDevice(), housePath);
+        return determineDevicePath(log.getDevice(), housePath + "/" +log.getHouse().getName());
     }
 
 
@@ -131,7 +133,8 @@ public class LoggerService {
      */  
     private Path determineDevicePath(Device device, String housePath){
         return Paths.get(new StringBuilder(housePath)
-            .append(device.getType().toString())
+            .append("/")
+            .append(device.getType().getLabel())
             .append("/")
             .append(device.getType().getLabel())
             .append(device.getId())
@@ -148,7 +151,7 @@ public class LoggerService {
      */
     private void writeCsvLogToFile(Path p, LogEntry log) throws IOException{
         if (!Files.exists(p)) Files.createFile(p); 
-        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
+        FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file 
         fos.write(log.getCsvString().getBytes());
         fos.close();
     }
@@ -162,8 +165,8 @@ public class LoggerService {
      */
     private void writeLogToFile(Path p, LogEntry log) throws IOException{
         if (!Files.exists(p)) Files.createFile(p); 
-        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
-        fos.write(log.toString().getBytes());
+        FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file 
+        fos.write(log.toString().getBytes());  //DESCOBRIR METODO Q ESCREVE NO FIM DO FICHEIRO 
         fos.close();
     }
 

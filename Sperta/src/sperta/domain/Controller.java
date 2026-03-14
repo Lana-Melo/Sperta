@@ -11,6 +11,7 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
@@ -22,20 +23,23 @@ import sperta.services.SecurityService;
 import sperta.utils.LogEntry;
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
+import sperta.utils.Persistence;
 import sperta.utils.SectionType;
 
 public class Controller extends Thread{
 
         private Socket socket = null;
         private IUser currUser;
+        private LoggerService logs;
 
         public Controller(Socket inSoc){ // I'm not sure about the level of protection needed for this constructor
                 socket = inSoc;
+                logs = new LoggerService();
         }
         public void run(){
         // TODO: all the interaction with the client (Sofia's task)
 
-                //Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+                Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
                 //fazer o shutdown gracioso q vai fechar a socket 
 
                         try {
@@ -43,7 +47,7 @@ public class Controller extends Thread{
                                 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
                                 //atestar 
-                                attest(outStream, inStream);
+                                if(!attest(outStream, inStream)){ socket.close(); return; }
 
                                 //autenticar 
                                 authenticate(outStream, inStream);
@@ -57,14 +61,26 @@ public class Controller extends Thread{
 
                                 socket.close();
                                 
-                        } catch (EOFException e) {
-
-                        } catch (IOException  | ClassNotFoundException e) {
-                                e.printStackTrace();
-                        }
-                
                         
 
+                        } catch (IOException  | ClassNotFoundException e ) {
+                                try {
+                                        socket.close();
+                                } catch (IOException e1) {
+                                        e1.printStackTrace();
+                                }
+                        }
+        
+                        
+
+        }
+        private void shutdown(){
+                System.out.println("\nThread shutting down...");
+                try {
+                        socket.close();
+                } catch (IOException e1) {
+                        e1.printStackTrace();
+                }
         }
         /**
          * 
@@ -73,7 +89,7 @@ public class Controller extends Thread{
          * @throws IOException
          * @throws ClassNotFoundException
          */
-        private void attest(ObjectOutputStream outStream, ObjectInputStream inStream ) throws IOException, ClassNotFoundException{
+        private boolean attest(ObjectOutputStream outStream, ObjectInputStream inStream ) throws IOException, ClassNotFoundException{
                 /**
                  * este n precisa de nada do repository 
                  */
@@ -92,7 +108,9 @@ public class Controller extends Thread{
                 
                 outStream.writeObject(jarSize == jarExpectedSize ? MessageCodes.OK : MessageCodes.NOK); //mando a msg com ok ou nok
                 outStream.flush();
-                if (jarSize != jarExpectedSize){ socket.close(); return;}
+                
+                return jarSize == jarExpectedSize;
+                
         }
 
         /**
@@ -302,7 +320,7 @@ public class Controller extends Thread{
                 if (!SecurityService.checkUserActionPermissions(log)) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return; }
 
                 device.setState(deviceValue);
-                new LoggerService().insertLog(log);
+                logs.insertLog(log);
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
 
@@ -335,7 +353,12 @@ public class Controller extends Thread{
                 LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
                 if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return;}
 
-                repo_hm.addDevice(SectionType.ALL.getEnum(s));
+                Device repoDevice = repo_hm.addDevice(SectionType.ALL.getEnum(s));
+                log.setDevice(repoDevice);
+                Persistence.createDeviceLogFile(repo_hm, repoDevice);
+                System.out.println("Antes de log");
+                logs.insertLog(log);
+                System.out.println("Depois de log");
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
 
