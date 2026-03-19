@@ -198,6 +198,7 @@ public class Controller extends Thread{
 
                 if (!d.matches("[A-Z]\\d+")) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
 
+                String sectionLabel = d.substring(0, 1);
                 Long deviceId = Long.parseLong(d.substring(1));
                 Device device = null;
                 for (SectionType st : SectionType.values()) {
@@ -209,6 +210,7 @@ public class Controller extends Thread{
 
                 LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repo_hm);
                 log.setDevice(device);
+                log.setSectionType(SectionType.ALL.getEnum(sectionLabel));
                 if (!SecurityService.checkUserActionPermissions(log)) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return; }
 
                 BufferedReader br = new LoggerService().getAllDeviceHistory(repo_hm, device);
@@ -306,6 +308,7 @@ public class Controller extends Thread{
 
                 if (!d.matches("[A-Z]\\d+")) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
 
+                String sectionLabel = d.substring(0, 1);
                 Long deviceId = Long.parseLong(d.substring(1));
                 Device device = null;
                 for (SectionType st : SectionType.values()) {
@@ -318,6 +321,7 @@ public class Controller extends Thread{
                 LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repo_hm);
                 log.setDevice(device); //diz ao log o device
                 log.setDevicesValue(deviceValue);
+                log.setSectionType(SectionType.ALL.getEnum(sectionLabel));
                 if (!SecurityService.checkUserActionPermissions(log)) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return; }
 
                 device.setState(deviceValue);
