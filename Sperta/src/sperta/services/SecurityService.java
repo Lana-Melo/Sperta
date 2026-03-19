@@ -31,7 +31,9 @@ public class SecurityService {
         //System.out.println(section.hasMantainer(log.getUser()));
         if (section != null && section.hasMantainer(log.getUser())) return true; //check if it's trying to access a section and if has permissions over it
 
-        if(log.getOperation() == Operation.RH){
+        if (OWNER_OPERATIONS.contains(log.getOperation())){
+
+        } else if(log.getOperation() == Operation.RH){
             section = log.getHouse().getSection(log.getDevice().getType());
             if (section != null && section.hasMantainer(log.getUser())) return true;
         } else if (log.getOperation() == Operation.RT) {

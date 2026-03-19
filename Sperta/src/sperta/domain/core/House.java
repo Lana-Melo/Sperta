@@ -30,7 +30,7 @@ public class House implements java.io.Serializable{
     private Map<SectionType, ISection> makeSections(){
         Map<SectionType, ISection> map = new EnumMap<>(SectionType.class);
         for (SectionType type: SectionType.values()){
-            if (type == SectionType.ALL) continue; //skip "all"
+            //if (type == SectionType.ALL) continue; //skip "all" //We're not skipping anymore
             ISection s = new Section(type, 1L , new HashMap<>());
             map.put(type, s);
         }
@@ -81,13 +81,30 @@ public class House implements java.io.Serializable{
         return this.getSections().get(type).getDevices();
     }
 
+    /**
+     * This function inserts a mantainer in the section of given type. 
+     * It does have some domain rules:    PS:(it shouldn't though, but since this is a short term project....)
+     *  - When a mantainer is inserted and type = ALL -> the user is added to all sections and section ALL
+     *  - When type != ALL:
+     *      - If user already in ALL -> User is removed from all sections (including ALL) 
+     *                                  and is inserted 
+     *      - Else ->  User is added to said section
+     * @param mantainer
+     * @param type
+     */
     public void addMantainerToSection(IUser mantainer, SectionType type){
         if(type == SectionType.ALL) {addMantainerToAllSections(mantainer); return;}
+        if(sections.get(SectionType.ALL).hasMantainer(mantainer))
+            removeMantainerFromAllSections(mantainer);
         this.getSections().get(type).addMantainer(mantainer);
     }
 
     public void addMantainerToAllSections(IUser mantainer){
         this.getSections().forEach((k,v) -> { v.addMantainer(mantainer);});
+    }
+
+    public void removeMantainerFromAllSections(IUser mantainer){
+        for (SectionType type : SectionType.values()){removeMantainerFromSection(mantainer, type);}
     }
 
     public void removeMantainerFromSection(IUser mantainer, SectionType type){
@@ -103,14 +120,18 @@ public class House implements java.io.Serializable{
     }
 
     @Override
-    public String toString(){
-        String houseString = "House [name=" + name + ", owner=" + owner.getUserId() + "]";
-        for (SectionType type: this.getSections().keySet()){
-            houseString += "\n  Section " + type + ":";
-            for (Device d: this.getSections().get(type).getDevices()){
-                houseString += "\n    " + d;
+    public String toString() {
+        StringBuilder houseString = new StringBuilder()
+            .append("House [name=").append(name)
+            .append(", owner=") .append(owner.getUserId())
+            .append("]");
+        for (SectionType type : this.getSections().keySet()) {
+            houseString.append("\n  Section ").append(type).append(":");
+            for (Device d : this.getSections().get(type).getDevices()) {
+                houseString.append("\n    ").append(d);
             }
         }
-        return houseString;
+        return houseString.toString();
     }
+
 }

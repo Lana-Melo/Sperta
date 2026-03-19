@@ -83,8 +83,6 @@ public class LoggerService {
     public BufferedReader getAllDeviceHistory(House house, Device device) throws FileNotFoundException{
         Path devicePath = determineDevicePath(device, determineHousePath(house).toString());
         return new BufferedReader(new FileReader(devicePath.toFile()));
-        //TODO: Esta função está muito simples. Só se pode dar ao utilizador o histórico de dados a que ele tem permissão!
-        //Talvez seria boa ideia dividir o getAllDeviceHistory por funções relativas a cada Secção e não a todas as secções
     }
 
     /**
