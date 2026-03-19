@@ -63,13 +63,4 @@ public class Device  implements java.io.Serializable {
     }
 
     
-
-    //@Override
-    //public boolean equals(Object other){
-    //    if (other == null || !other.getClass().equals(Device.class))
-    //        return false;
-    //    Device device = (Device) other;
-    //    return device.getId() == this.getId() &&
-    //        device.getType() == this.getType();
-    //}
 }

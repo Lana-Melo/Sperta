@@ -126,6 +126,7 @@ public class House implements java.io.Serializable{
             .append(", owner=") .append(owner.getUserId())
             .append("]");
         for (SectionType type : this.getSections().keySet()) {
+            if (type == SectionType.ALL) continue;
             houseString.append("\n  Section ").append(type).append(":");
             for (Device d : this.getSections().get(type).getDevices()) {
                 houseString.append("\n    ").append(d);

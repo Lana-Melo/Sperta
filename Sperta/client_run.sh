@@ -1,0 +1,1 @@
+java -jar SpertaClient.jar localhost sofia 1234 

@@ -1,0 +1,24 @@
+CREATE Casa
+RD Casa E
+RD Casa E
+EC Casa E1 9001
+EC Casa E1 10
+EC Casa E3 10
+EC Casa E2 1
+RD Casa E
+EC Casa E3 10
+RD Casa P
+RD Casa P
+RD Casa G
+EC Casa G1
+
+CREATE Cabana
+RD Cabana L
+EC Cabana L1 600
+EC Cabana L2 600
+RD Cabana L 
+EC Cabana L2 601
+EC Cabana L2 600
+
+RH Casa E1
+RH Casa G1
