@@ -1,9 +1,9 @@
 package sperta.utils;
 
 import java.time.LocalDateTime;
+import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
-import sperta.domain.core.Device;
 
 /**
  * <p>This class represents a log entry, whenever calling LoggerService, you should create a LogEntry.
@@ -114,10 +114,10 @@ public class LogEntry {
             .append(user.toString()).append(",")
             .append(operation.toString()).append(",")
             .append(house.getName()).append(",")
-            .append(addedUser).append(",")
-            .append(sectionType).append(",")
+            //.append(addedUser).append(",")
+            //.append(sectionType).append(",")
             .append(device).append(",")
-            .append(devicesValue)
+            .append(devicesValue == null ?  0 : devicesValue)
             .append("\n")
             .toString();
     }

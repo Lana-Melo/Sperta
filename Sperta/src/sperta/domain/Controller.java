@@ -1,7 +1,6 @@
 package sperta.domain;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,8 +10,6 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -199,6 +196,8 @@ public class Controller extends Thread{
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 if (repo_hm == null) { outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return; }
 
+                if (!d.matches("[A-Z]\\d+")) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
+
                 Long deviceId = Long.parseLong(d.substring(1));
                 Device device = null;
                 for (SectionType st : SectionType.values()) {
@@ -305,6 +304,8 @@ public class Controller extends Thread{
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 if (repo_hm == null) { outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return; }
 
+                if (!d.matches("[A-Z]\\d+")) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
+
                 Long deviceId = Long.parseLong(d.substring(1));
                 Device device = null;
                 for (SectionType st : SectionType.values()) {
@@ -323,7 +324,7 @@ public class Controller extends Thread{
                 logs.insertLog(log);
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
-
+                
         }
 
         /**
@@ -346,8 +347,8 @@ public class Controller extends Thread{
         private void rd(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 String hm = (String) inStream.readObject();
                 String s = (String) inStream.readObject();
-
-                if (!s.equals("all") && s.length() > 1) outStream.writeObject(MessageCodes.NOK);
+                
+                if (SectionType.ALL.getEnum(s.toUpperCase()) == null|| (!s.equals("all") && s.length() > 1)) { outStream.writeObject(MessageCodes.NOK); outStream.flush(); return;}
 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 if(repo_hm == null){ outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;} 
@@ -401,7 +402,6 @@ public class Controller extends Thread{
                 repo_hm.addMantainerToSection(repo_user, SectionType.ALL.getEnum(s));
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
-
         }
         /**
          * Handles the CREATE command from the client.

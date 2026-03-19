@@ -9,7 +9,6 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Scanner;
-
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 
@@ -286,7 +285,9 @@ public class SpertaClient {
     private static void generateFile(ObjectInputStream in, String filename) throws IOException, ClassNotFoundException {
         byte[] data = new byte[(int)(long) in.readObject()];
         in.readFully(data);
-        File f = new File(filename);
+        File dir = new File("data/clientFiles");
+        if (!dir.exists()) dir.mkdirs();
+        File f = new File(dir, filename);
         FileOutputStream f_out = new FileOutputStream(f);
         f_out.write(data);
         f_out.close();

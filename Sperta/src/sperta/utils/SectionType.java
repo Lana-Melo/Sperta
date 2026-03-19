@@ -25,7 +25,7 @@ public enum SectionType {
             case "P": return PORTAS;
             case "S": return STORES;
             case "all": return ALL;
-            default: throw new IllegalStateException();
+            default: return null;
         }
         }
 }

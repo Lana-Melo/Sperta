@@ -82,7 +82,12 @@ public class House implements java.io.Serializable{
     }
 
     public void addMantainerToSection(IUser mantainer, SectionType type){
+        if(type == SectionType.ALL) {addMantainerToAllSections(mantainer); return;}
         this.getSections().get(type).addMantainer(mantainer);
+    }
+
+    public void addMantainerToAllSections(IUser mantainer){
+        this.getSections().forEach((k,v) -> { v.addMantainer(mantainer);});
     }
 
     public void removeMantainerFromSection(IUser mantainer, SectionType type){
