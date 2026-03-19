@@ -31,7 +31,7 @@ public class House implements java.io.Serializable{
         Map<SectionType, ISection> map = new EnumMap<>(SectionType.class);
         for (SectionType type: SectionType.values()){
             if (type == SectionType.ALL) continue; //skip "all"
-            ISection s = new Section(type, 0L , new HashMap<>());
+            ISection s = new Section(type, 1L , new HashMap<>());
             map.put(type, s);
         }
         return map;
