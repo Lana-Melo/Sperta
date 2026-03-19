@@ -7,6 +7,7 @@ EC Casa E3 10
 EC Casa E2 1
 RD Casa E
 EC Casa E3 10
+EC Casa E2 0
 RD Casa P
 RD Casa P
 RD Casa G
@@ -20,5 +21,5 @@ RD Cabana L
 EC Cabana L2 601
 EC Cabana L2 600
 
-RH Casa E1
+RH Casa E2
 RH Casa G1

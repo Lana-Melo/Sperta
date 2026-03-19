@@ -9,9 +9,9 @@ import sperta.utils.Persistence;
 
 public enum Repository {
     INSTANCE;
-    
+
     private static final String HOUSE_PATH = "./data/houses/";
-    
+
     private Map<String, IUser> userCatalog = new ConcurrentHashMap<>();
     private Map<String, House> homeCatalog = new ConcurrentHashMap<>();
 
@@ -25,14 +25,14 @@ public enum Repository {
 
     public void persist() {
         Persistence.persist("./data/users.txt", userCatalog);
-        Persistence.persist("./data/homes.txt", homeCatalog); 
+        Persistence.persist("./data/homes.txt", homeCatalog);
     }
 
     // ==================================================
     // CRUD operations for users
     // ==================================================
     public boolean addUser(IUser user) {
-        synchronized (userLock){
+        synchronized (userLock) {
             if (userCatalog.containsKey(user.getUserId())) {
                 return false;
             }
@@ -54,15 +54,19 @@ public enum Repository {
     public boolean addHouse(House house) {
         synchronized (homeLock) {
             if (homeCatalog.containsKey(house.getId())) {
-                System.out.println("Já tem casa");
+                //System.out.println("Já tem casa");
                 return false;
             }
             homeCatalog.put(house.getId(), house);
         }
 
-        try { // If creating the files wasn't possible, the operation fails
-            Persistence.createLogFiles(HOUSE_PATH + "/" + house.getName(), house.getName());
-        } catch (IOException e){
+        try {
+            // If creating the files wasn't possible, the operation fails
+            Persistence.createLogFiles(
+                HOUSE_PATH + "/" + house.getName(),
+                house.getName()
+            );
+        } catch (IOException e) {
             homeCatalog.remove(house.getId());
             return false;
         }

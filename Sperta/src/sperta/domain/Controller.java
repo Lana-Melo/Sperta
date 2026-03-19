@@ -204,7 +204,6 @@ public class Controller extends Thread{
                 Device device = repo_hm.getDeviceFromSectionById(deviceId, SectionType.ALL.getEnum(sectionLabel));
                 if (device == null) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
 
-                System.out.println("THIS IS THE DEVICE I FOUND " + device);
                 LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repo_hm);
                 log.setDevice(device);
                 log.setSectionType(SectionType.ALL.getEnum(sectionLabel));
@@ -360,9 +359,7 @@ public class Controller extends Thread{
                 Device repoDevice = repo_hm.addDevice(SectionType.ALL.getEnum(s.toUpperCase()));
                 log.setDevice(repoDevice);
                 Persistence.createDeviceLogFile(repo_hm, repoDevice);
-                System.out.println("Antes de log");
                 logs.insertLog(log);
-                System.out.println("Depois de log");
                 outStream.writeObject(MessageCodes.OK);
                 outStream.flush();
 

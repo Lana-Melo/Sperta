@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import sperta.utils.SectionType;
 
-public class Section implements ISection{
+public class Section implements ISection {
+
     private Long contador;
     private SectionType type;
     private List<Device> devices;
@@ -17,20 +17,28 @@ public class Section implements ISection{
      * Contador is correspondent to the next available number. If there are no houses, contador should equal to 0
      * @param contador
      */
-    public Section (SectionType type, Long contador, Map<String, IUser> mantainers){
+    public Section(
+        SectionType type,
+        Long contador,
+        Map<String, IUser> mantainers
+    ) {
         this.type = type;
         this.contador = contador;
         this.devices = new ArrayList<>();
         this.mantainers = mantainers;
     }
 
-    public Section(ISection original){
+    public Section(ISection original) {
         this.type = original.getType();
         this.contador = original.getContador();
         this.devices = new ArrayList<>();
         this.mantainers = new HashMap<>();
-        for (Device d : original.getDevices()){devices.add(new Device(d));}
-        for (String uId : original.getMantainers().keySet()){this.mantainers.put(uId, new User(this.mantainers.get(uId)));}
+        for (Device d : original.getDevices()) {
+            devices.add(new Device(d));
+        }
+        for (String uId : original.getMantainers().keySet()) {
+            this.mantainers.put(uId, new User(this.mantainers.get(uId)));
+        }
     }
 
     public Long getContador() {
@@ -41,21 +49,23 @@ public class Section implements ISection{
         this.contador = contador;
     }
 
-    public void setDevices(List<Device> devices){
+    public void setDevices(List<Device> devices) {
         this.devices = devices;
     }
 
-    public Device addDevice(){
+    public Device addDevice() {
         Device d = new Device(contador++, this.type);
         this.devices.add(d);
         return d;
     }
 
-    public void addDevices(int n){
-        for (int i = 0; i < n; i++) {this.addDevice();}
+    public void addDevices(int n) {
+        for (int i = 0; i < n; i++) {
+            this.addDevice();
+        }
     }
 
-    public List<Device> getDevices(){
+    public List<Device> getDevices() {
         return this.devices;
     }
 
@@ -65,44 +75,45 @@ public class Section implements ISection{
      * @param id
      * @return Device if found, else null
      */
-    public Device getDevicebyId(Long id){
-        return this.getDevices().stream()
+    public Device getDevicebyId(Long id) {
+        return this.getDevices()
+            .stream()
             .filter(device -> device.getId().equals(id))
-            .findFirst().orElse(null);
+            .findFirst()
+            .orElse(null);
     }
 
-    public void removeDevice(Device d){
+    public void removeDevice(Device d) {
         this.devices.removeIf(device -> device.getId().equals(d.getId()));
-}
+    }
 
     public void setMantainers(Map<String, IUser> mantainers) {
         this.mantainers = mantainers;
     }
 
-    public Map<String, IUser> getMantainers(){
+    public Map<String, IUser> getMantainers() {
         return this.mantainers;
     }
 
-    public void addMantainer(IUser user){
+    public void addMantainer(IUser user) {
         this.mantainers.put(user.getUserId(), user);
-        this.mantainers.forEach((k,v) -> {System.out.println(v);});
-        System.out.println();
-
+        //this.mantainers.forEach((k,v) -> {System.out.println(v);});
+        //System.out.println();
     }
 
-    public void removeMantainer(IUser user){
+    public void removeMantainer(IUser user) {
         this.mantainers.remove(user.getUserId());
     }
 
-    public SectionType getType(){
+    public SectionType getType() {
         return type;
     }
 
-    public void setType(SectionType t){
+    public void setType(SectionType t) {
         this.type = t;
     }
 
-    public boolean hasMantainer(IUser user){
+    public boolean hasMantainer(IUser user) {
         return this.mantainers.containsKey(user.getUserId());
     }
 }
