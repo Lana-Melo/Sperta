@@ -12,7 +12,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.utils.LogEntry;
@@ -21,13 +20,14 @@ import sperta.utils.SectionType;
 
 /**
  * Class to help with LoggingServices related to SpertaServer
- * 
- * 
+ *
+ *
  * LoggerService assumes Repository creates all of the valid directories for data storage
  * LoggerService only creates the .csv files for each device
- * 
+ *
  */
 public class LoggerService {
+
     private static final String DATA_PATH = "data/houses";
 
     /**
@@ -37,10 +37,12 @@ public class LoggerService {
      * @param log
      * @throws IOException
      */
-    public void insertLog(LogEntry log) throws IOException { 
-        Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
-        writeLogToFile(houseLogPath , log);
-        if (log.getOperation().equals(Operation.EC) || log.getOperation().equals(Operation.RD)){
+    public void insertLog(LogEntry log) throws IOException {
+        //Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
+        Path houseLogPath = determineHousePath(log).resolve(log.getHouse().getName() + ".csv");
+        writeLogToFile(houseLogPath, log);
+        //if ( log.getOperation().equals(Operation.EC) || log.getOperation().equals(Operation.RD)) {
+        if (log.getOperation().equals(Operation.EC)){
             Path devicePath = determineDevicePath(log, DATA_PATH);
             writeCsvLogToFile(devicePath, log);
         }
@@ -52,21 +54,35 @@ public class LoggerService {
      * @return
      * @throws IOException
      */
-    public List<String> getLastOperationsOfHouse(House house) throws IOException {
+    public List<String> getLastOperationsOfHouse(House house)
+        throws IOException {
         List<SectionType> sections = Stream.of(SectionType.values()).toList(); //get all sections
         return getLastOperationsOfHouseBySection(house, sections);
     }
 
-    public List<String> getLastOperationsOfHouseBySection(House house, List<SectionType> sections) throws IOException {
+    public List<String> getLastOperationsOfHouseBySection(
+        House house,
+        List<SectionType> sections
+    ) throws IOException {
         List<String> logs = new ArrayList<>();
         Path housePath = determineHousePath(house);
-        List<String> sCodes = sections.stream().map(SectionType::getLabel).toList();
-        for (File fileType : housePath.toFile().listFiles()){
+        List<String> sCodes = sections
+            .stream()
+            .map(SectionType::getLabel)
+            .toList();
+        for (File fileType : housePath.toFile().listFiles()) {
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
-            logs.add("For section " + fileType.getName());
-            for (File file : fileType.listFiles()){
-                if (file.getName().endsWith(".csv")){
-                    logs.add(file.getName() + ": " + readLastLineOfLog(file.toPath()));
+            //logs.add("For section " + fileType.getName());
+            for (File file : fileType.listFiles()) {
+                if (file.getName().endsWith(".csv")) {
+                    String lastLine = readLastLineOfLog(file.toPath());
+                    logs.add(//this replace firts will remove the extension
+                        new StringBuilder().append(file.getName().replaceFirst("\\.csv", ""))
+                                           .append(":")
+                                           .append((lastLine == null) ? "" : lastLine)
+                                           .toString()
+                        //file.getName().replaceFirst("\\.csv", "") + ": " + readLastLineOfLog(file.toPath())
+                    );
                 }
             }
         }
@@ -80,8 +96,12 @@ public class LoggerService {
      * @param device
      * @return
      */
-    public BufferedReader getAllDeviceHistory(House house, Device device) throws FileNotFoundException{
-        Path devicePath = determineDevicePath(device, determineHousePath(house).toString());
+    public BufferedReader getAllDeviceHistory(House house, Device device)
+        throws FileNotFoundException {
+        Path devicePath = determineDevicePath(
+            device,
+            determineHousePath(house).toString()
+        );
         return new BufferedReader(new FileReader(devicePath.toFile()));
     }
 
@@ -90,18 +110,18 @@ public class LoggerService {
      * @param log
      * @return
      */
-    private Path determineHousePath(LogEntry log){
+    private Path determineHousePath(LogEntry log) {
         return determineHousePath(log.getHouse());
     }
 
     public Path determineHousePath(House home) {
-        for (File file : new File(DATA_PATH).listFiles()){
-            if (file.getName().equals(home.getName())){
+        for (File file : new File(DATA_PATH).listFiles()) {
+            if (file.getName().equals(home.getName())) {
                 return Paths.get(
                     new StringBuilder(DATA_PATH)
-                    .append("/")
-                    .append(file.getName())
-                    .toString()
+                        .append("/")
+                        .append(file.getName())
+                        .toString()
                 );
             }
         }
@@ -115,10 +135,12 @@ public class LoggerService {
      * @param homePath
      * @return
      */
-    private Path determineDevicePath(LogEntry log, String housePath){
-        return determineDevicePath(log.getDevice(), housePath + "/" +log.getHouse().getName());
+    private Path determineDevicePath(LogEntry log, String housePath) {
+        return determineDevicePath(
+            log.getDevice(),
+            housePath + "/" + log.getHouse().getName()
+        );
     }
-
 
     /**
      * Correctly determines Device path, assuming housePath points to a valid house's device.
@@ -126,16 +148,17 @@ public class LoggerService {
      * @param log
      * @param homePath
      * @return
-     */  
-    private Path determineDevicePath(Device device, String housePath){
-        return Paths.get(new StringBuilder(housePath)
-            .append("/")
-            .append(device.getType().getLabel())
-            .append("/")
-            .append(device.getType().getLabel())
-            .append(device.getId())
-            .append(".csv")
-            .toString()
+     */
+    private Path determineDevicePath(Device device, String housePath) {
+        return Paths.get(
+            new StringBuilder(housePath)
+                .append("/")
+                .append(device.getType().getLabel())
+                .append("/")
+                .append(device.getType().getLabel())
+                .append(device.getId())
+                .append(".csv")
+                .toString()
         );
     }
 
@@ -145,13 +168,12 @@ public class LoggerService {
      * @param log
      * @throws IOException
      */
-    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException{
-        if (!Files.exists(p)) Files.createFile(p); 
-        FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file 
+    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException {
+        if (!Files.exists(p)) Files.createFile(p);
+        FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file
         fos.write(log.getCsvString().getBytes());
         fos.close();
     }
-
 
     /**
      * Assumes path is a valid path to a File. If the File doesn't exist, creates it
@@ -159,10 +181,10 @@ public class LoggerService {
      * @param log
      * @throws IOException
      */
-    private void writeLogToFile(Path p, LogEntry log) throws IOException{
-        if (!Files.exists(p)) Files.createFile(p); 
-        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file 
-        fos.write(log.toString().getBytes());  //DESCOBRIR METODO Q ESCREVE NO FIM DO FICHEIRO 
+    private void writeLogToFile(Path p, LogEntry log) throws IOException {
+        if (!Files.exists(p)) Files.createFile(p);
+        FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file
+        fos.write(log.toString().getBytes()); //DESCOBRIR METODO Q ESCREVE NO FIM DO FICHEIRO
         fos.close();
     }
 
@@ -175,14 +197,17 @@ public class LoggerService {
      * @throws IOException
      */
     private String readLastLineOfLog(Path pathToLog) throws IOException {
-        String lastLine =  null;
-        try (BufferedReader br = new BufferedReader(new FileReader(pathToLog.toFile()))){
-            String line; 
-            while((line = br.readLine()) != null){
+        String lastLine = null;
+        try (
+            BufferedReader br = new BufferedReader(
+                new FileReader(pathToLog.toFile())
+            )
+        ) {
+            String line;
+            while ((line = br.readLine()) != null) {
                 lastLine = line;
             }
         }
         return lastLine;
     }
-
 }

@@ -214,6 +214,7 @@ public class Controller extends Thread{
                 String line;
                 while ((line = br.readLine()) != null) sb.append(line).append("\n");
                 byte[] data = sb.toString().getBytes();
+                if (data.length == 0) {outStream.writeObject(MessageCodes.NODATA); outStream.flush(); return;}
                 outStream.writeObject(MessageCodes.OK);
                 outStream.writeObject((long) data.length);
                 outStream.write(data);
@@ -236,7 +237,7 @@ public class Controller extends Thread{
          * @param inStream
          * @param ope
          * @throws ClassNotFoundException
-         * @throws IOException
+         * @throws IOException 
          */
         private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) throws ClassNotFoundException, IOException {
                 String hm = (String) inStream.readObject();
@@ -260,6 +261,7 @@ public class Controller extends Thread{
                 }
 
                 byte[] data = String.join("\n", logs).getBytes();
+                if (data.length == 0) {outStream.writeObject(MessageCodes.NODATA); outStream.flush(); return;}
                 outStream.writeObject(MessageCodes.OK);
                 outStream.writeObject((long) data.length);
                 outStream.write(data);
@@ -393,6 +395,8 @@ public class Controller extends Thread{
 
                 House repo_hm = Repository.INSTANCE.getHouseById(hm);
                 if(repo_hm == null) { outStream.writeObject(MessageCodes.NOHM); outStream.flush(); return;}
+                
+                if (SectionType.ALL.getEnum(s) == null){ outStream.writeObject(MessageCodes.NOK); outStream.flush(); return;}
                 
                 LogEntry log = new LogEntry(LocalDateTime.now(),currUser,ope,repo_hm);
                 if(!(SecurityService.checkUserActionPermissions(log))) { outStream.writeObject(MessageCodes.NOPERM); outStream.flush(); return;}
