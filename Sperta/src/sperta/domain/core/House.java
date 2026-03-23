@@ -132,6 +132,7 @@ public class House implements java.io.Serializable{
                 houseString.append("\n    ").append(d);
             }
         }
+        houseString.append("\n");
         return houseString.toString();
     }
 

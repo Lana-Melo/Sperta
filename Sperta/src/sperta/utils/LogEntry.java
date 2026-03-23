@@ -124,7 +124,7 @@ public class LogEntry {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + house+ " ");
+        StringBuilder sb = new StringBuilder(timestamp+ " " + user+ " " + operation+ " " + house + " ");
         if (operation == Operation.CREATE){
             sb.append("# Criar Casa");
         } else if (operation == Operation.ADD){
