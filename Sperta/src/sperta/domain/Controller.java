@@ -309,11 +309,12 @@ public class Controller extends Thread{
                 String sectionLabel = d.substring(0, 1);
                 Long deviceId = Long.parseLong(d.substring(1));
                 Device device = null;
-                for (SectionType st : SectionType.values()) {
+                /*for (SectionType st : SectionType.values()) {
                         if (st == SectionType.ALL) continue;
                         device = repo_hm.getDeviceFromSectionById(deviceId, st);
                         if (device != null) break;
-                }
+                }*/
+                device = repo_hm.getDeviceFromSectionById(deviceId, SectionType.ALL.getEnum(sectionLabel));
                 if (device == null) { outStream.writeObject(MessageCodes.NOD); outStream.flush(); return; }
 
                 LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repo_hm);
