@@ -7,6 +7,10 @@ import sperta.domain.core.House;
 import sperta.domain.core.IUser;
 import sperta.utils.Persistence;
 
+/**
+ * Singleton repository for users and houses.
+ * Provides thread-safe CRUD operations and persistence.
+ */
 public enum Repository {
     INSTANCE;
 
@@ -18,14 +22,29 @@ public enum Repository {
     private Object userLock = new Object();
     private Object homeLock = new Object();
 
+    /**
+     * Private constructor to prevent instantiation. Loads existing data from files.
+     */
     private Repository() {
         Persistence.load("./data/users.txt", userCatalog);
         Persistence.load("./data/homes.txt", homeCatalog);
     }
 
+    /**
+     * Persists the current state of users and houses to files. 
+     * Should be called before application shutdown.
+     */
     public void persist() {
         Persistence.persist("./data/users.txt", userCatalog);
         Persistence.persist("./data/homes.txt", homeCatalog);
+    }
+
+    public void printState() {
+        System.out.println("Current Repository State:");
+        System.out.println("Users:");
+        userCatalog.values().forEach(user -> System.out.println("- " + user));
+        System.out.println("Houses:");
+        homeCatalog.values().forEach(house -> System.out.println("- " + house));
     }
 
     // ==================================================
