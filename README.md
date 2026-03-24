@@ -12,7 +12,7 @@ Projeto de Segurança e Confiabilidade
 
 This project consist in two applications: a server and a client. The server is responsible for managing the state of the system, including users, houses, sections, and devices. The client is a command-line interface that allows users to interact with the server and perform various operations.
 
-The project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version above Java 8 should suffice to compile and run the project, but the project was developed using Java 21 LTS.
+This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version above Java 8 should suffice to compile and run the project, nevertheless the project was developed using Java 21 LTS.
 
 [Go to Usage](#usage)
 
@@ -41,8 +41,6 @@ The project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version a
 
 #### The Code
 
-The file scructure follows the Architecture diagram showed above.
-
 ```plaintext
 |domain/  
 |      |core/
@@ -63,7 +61,7 @@ The file scructure follows the Architecture diagram showed above.
 #### The Data
 
 ```plaintext
-|clientFiles/           --> Holds all client files (since each client could run on their own, no distinction between clients )
+|clientFiles/           --> Holds all client files 
 |houses/                --> Holds all Houses's log files
 |      |Casa_1/         --> Holds all device's logs from Casa_1
 |      |      |E/       --> Holds all device's logs from Casa_1 from Section E
@@ -82,7 +80,7 @@ The file scructure follows the Architecture diagram showed above.
 ##### How is Data stored?
 
 When exiting, SpertaServer safely closes all threads and persisits the HashMaps inside Repository [see file structure](#file-structure). These HashMaps are then serialized (using java's native serialization) and that byte stream is stored in homes.txt and users.txt respectively.
-No data is stored while the server is running with the exception of logs. Data is only persisted when the server is running.
+No data is stored while the server is running with the exception of logs. Data is only persisted when the server ends it's execution.
 
 Every time SpertaServer loads, it loads the bytes from these files and creates a backup, in case of malfuncioning, preventing full data-loss.
 
@@ -92,7 +90,7 @@ Logs are managed by LoggerService that is called by a Controller thread that has
 
 ### Building the Project and Starting the Server
 
-To build the project, navigate to the Sperta/ directory and run:
+To build the project, navigate to the `Sperta` directory and run:
 ```
 bash build.sh
 ```
@@ -102,7 +100,7 @@ It will compile the source code, generating the JAR files for both the server an
 
 ### Starting the Client
 
-To start the client, navigate to the Sperta/ directory and run:
+To start the client, navigate to the `Sperta` directory and run:
 ```
 bash client_run.sh
 ```
@@ -114,11 +112,11 @@ If you want to run the app with a different user run:
 ```
 java -jar SpertaClient.jar localhost <username> <password>
 ```
-If you don't pass both arguments or the correct user's password, the server wont establish a connection.
+If you don't pass neither every argument nor the correct user's password, the server wont establish a connection.
 
 ## Limitations and Future Work
 
 - The current implementation does not include the delete operations for users, houses, sections, and devices. Future work will involve implementing these operations to allow for more comprehensive management of the system.
 - The current design does not allow different users to have the same house name. Future work will involve implementing a more robust naming system to allow for duplicate house names while still maintaining unique identifiers for each house.
 - The current implementation does not include security features such as encryption for user passwords. Future work will involve implementing these security features to enhance the overall security of the system.
-- When saving that the client requests it is saved to data/clientFiles/ dir, which is not protected and can be accessed by anyone that has access to said dir.
+- When saving client requests they are saved to `./data/clientFiles/` . This dir is not protected and can be accessed by anyone that has access to it.
