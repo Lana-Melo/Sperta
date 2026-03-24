@@ -32,15 +32,18 @@ The project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version a
 
 ### File Structure
 
+```plaintext
 |data/       --> contains the data that is persisted (by both client and server)
 |out/        --> contains the binaries
 |src/sperta/ --> contains the code
 |.           --> contains scripts and the output jars
+```
 
 #### The Code
 
 The file scructure follows the Architecture diagram showed above.
 
+```plaintext
 |domain/  
 |      |core/
 |      |...                  --> Classes from the Domain (House, Section, User)
@@ -55,9 +58,11 @@ The file scructure follows the Architecture diagram showed above.
 |      |Persistence.java     --> Abstracts certain creation and manipulation of files
 |SpertaClient.java           --> Runs a client and it's CLI
 |SpertaServer.java           --> Runs the server and launches Controller threads
+```
 
 #### The Data
 
+```plaintext
 |clientFiles/           --> Holds all client files (since each client could run on their own, no distinction between clients )
 |houses/                --> Holds all Houses's log files
 |      |Casa_1/         --> Holds all device's logs from Casa_1
@@ -72,6 +77,7 @@ The file scructure follows the Architecture diagram showed above.
 |attestation.txt        --> After compilation, receives size (in bytes) of SpertaClient's jar size
 |homes.txt              --> Contains the natively serialized in-memmory representation of all registered houses
 |users.txt              --> Contains the natively serialized in-memmory representation of all registered users
+```
 
 ##### How is Data stored?
 
