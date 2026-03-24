@@ -42,7 +42,6 @@ public class SpertaClient {
             System.out.println("Hello World");
             // atestar
             attestation(out, in, clientSocket);
-
             // autenticar
             autentication(out, in, user, pass);
             // loop comandos
@@ -65,9 +64,6 @@ public class SpertaClient {
      * @throws Exception
      */
     private static void attestation(ObjectOutputStream out, ObjectInputStream in, Socket clientSocket) throws Exception {
-    //jar length ainda tenho de pensar como fazer isto, por enquanto mandamos 0          //ATTENTION PLEASE :)
-    //ainda n atesta coisa alguma 
-    //como é q o cliente sabe o proprio tamanho ???
         long jarSize = new File(SpertaClient.class.getProtectionDomain().getCodeSource().getLocation().toURI()).length();
         out.writeObject((int) jarSize);
         out.flush();
@@ -237,8 +233,8 @@ public class SpertaClient {
         out.flush();
 
         MessageCodes server_response = (MessageCodes) in.readObject();
-        System.out.println("Response: " + server_response);
-        if (server_response != MessageCodes.OK) return;
+        System.out.print("Response: " + server_response);
+        if (server_response != MessageCodes.OK){System.out.println(); return;}
         generateFile(in, "RT_" + parts[1] + ".txt");
     }
     /**
@@ -258,8 +254,8 @@ public class SpertaClient {
         out.flush();
 
         MessageCodes server_response = (MessageCodes) in.readObject();
-        System.out.println("Response: " + server_response);
-        if (server_response != MessageCodes.OK) return;
+        System.out.print("Response: " + server_response);
+        if (server_response != MessageCodes.OK){System.out.println(); return;}
         generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv");
     }
 
@@ -283,15 +279,17 @@ public class SpertaClient {
      * @throws ClassNotFoundException
      */
     private static void generateFile(ObjectInputStream in, String filename) throws IOException, ClassNotFoundException {
-        byte[] data = new byte[(int)(long) in.readObject()];
+        long size = (long) in.readObject();
+        System.out.print(", " + size + " (long), seguido de " + size + " bytes de dados.\n");
+        byte[] data = new byte[(int) size];
         in.readFully(data);
         File dir = new File("data/clientFiles");
         if (!dir.exists()) dir.mkdirs();
         File f = new File(dir, filename);
         FileOutputStream f_out = new FileOutputStream(f);
         f_out.write(data);
-        f_out.close();
-        System.out.println(new String(data)); //mostra conteudo do ficheiro n sei se é preciso sinceramente 
+        f_out.close(); 
+        System.out.println(new String(data));
     }
 
         
