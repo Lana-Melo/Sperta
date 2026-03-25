@@ -74,7 +74,7 @@ public class LoggerService {
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
             //logs.add("For section " + fileType.getName());
             for (File file : fileType.listFiles()) {
-                if (file.getName().endsWith(".csv")) {
+                if (file.getName().endsWith(".csv") && file.length() > 0) {
                     String lastLine = readLastLineOfLog(file.toPath());
                     logs.add(//this replace firts will remove the extension
                         new StringBuilder().append(file.getName().replaceFirst("\\.csv", ""))
