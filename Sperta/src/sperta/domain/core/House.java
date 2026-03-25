@@ -116,6 +116,7 @@ public class House implements java.io.Serializable{
     }
 
     public Device getDeviceFromSectionById(Long id, SectionType type){
+        if (type == null) return null;
         return this.getSections().get(type).getDevicebyId(id);
     }
 
