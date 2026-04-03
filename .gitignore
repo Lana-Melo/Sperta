@@ -26,8 +26,6 @@ hs_err_pid*
 replay_pid*
 
 .vscode/
-bin/
-lib
-out
+Sperta*/out/*
 
 data/

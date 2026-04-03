@@ -28,7 +28,7 @@ This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version 
 
 ## Architecture
 
-![Architecture Diagram](Diagrama.png)
+![Architecture Diagram](other/Diagrama.png)
 
 ### File Structure
 
