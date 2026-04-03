@@ -103,7 +103,7 @@ public class Controller extends Thread {
             jarExpectedSize = Integer.parseInt(parts[1]);
         }
 
-        outStream.writeObject(jarSize == jarExpectedSize ? MessageCodes.OK : MessageCodes.NOK);
+        outStream.writeObject(jarSize == jarExpectedSize ? MessageCodes.OK_ATTEST : MessageCodes.NOK_ATTEST);
         outStream.flush();
 
         return jarSize == jarExpectedSize;
@@ -291,13 +291,14 @@ public class Controller extends Thread {
         if (repoHm.getOwner().equals(currUser)) {
             logContent = new LoggerService().getLastOperationsOfHouse(repoHm);
         } else {
-            List<SectionType> userSections = new ArrayList<>();
-            for (SectionType st : SectionType.values()) {
-                if (st == SectionType.ALL)
-                    continue;
-                if (repoHm.getSection(st).hasMantainer(currUser))
-                    userSections.add(st);
-            }
+            //List<SectionType> userSections = new ArrayList<>();
+            //for (SectionType st : SectionType.values()) {
+            //    if (st == SectionType.ALL)
+            //        continue;
+            //    if (repoHm.getSection(st).hasMantainer(currUser))
+            //        userSections.add(st);
+            //}
+            List<SectionType> userSections = SecurityService.getUserAccessibleSectionTypes(repoHm, currUser);
             logContent = new LoggerService().getLastOperationsOfHouseBySection(repoHm, userSections);
         }
 
@@ -510,6 +511,8 @@ public class Controller extends Thread {
      */
     private void create(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
             throws ClassNotFoundException, IOException {
+        //TODO after creating the home, we need to store the home section's symmetric keys
+        //
         String hm = (String) inStream.readObject();
         House house = new House(currUser, hm);
         outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);

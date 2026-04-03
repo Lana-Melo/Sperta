@@ -14,7 +14,7 @@ import sperta.utils.Operation;
 
 public class SpertaClient {
 
-    private static int DEFAULT_PORT_NUMBER = 22345;
+    private static final int DEFAULT_PORT_NUMBER = 22345;
     public static void main(String[] args) {
         /*
          * -> ligar ao server
@@ -56,6 +56,7 @@ public class SpertaClient {
             e.printStackTrace();
         }
     }
+    
     /**
      * Sends attestation data to the server and validates the response.
      * @param out
@@ -64,7 +65,10 @@ public class SpertaClient {
      * @throws Exception
      */
     private static void attestation(ObjectOutputStream out, ObjectInputStream in, Socket clientSocket) throws Exception {
-        long jarSize = new File(SpertaClient.class.getProtectionDomain().getCodeSource().getLocation().toURI()).length();
+        //TODO The jarsize is not used for attestation no more
+        //attestation receives an 8 byte nonce, concatenates the whole content of the jar with said nonce
+        //hashes the result and sends it back
+        long jarSize = new File(SpertaClient.class.getProtectionDomain().getCodeSource().getLocation().toURI()).length(); 
         out.writeObject((int) jarSize);
         out.flush();
         MessageCodes server_response = (MessageCodes) in.readObject();
@@ -76,6 +80,7 @@ public class SpertaClient {
             System.exit(0);
         }
     }
+    
     /**
      * Authenticates the user, retrying on wrong password.
      * @param out
@@ -100,6 +105,7 @@ public class SpertaClient {
 
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");
     }
+
     /**
      * Prints available commands to the user.
      */
@@ -115,6 +121,7 @@ public class SpertaClient {
             help
             """);
     }
+
     /**
      * Main interaction loop, reads and dispatches user commands.
      * @param out
@@ -147,6 +154,7 @@ public class SpertaClient {
         }
         sc.close();
     }
+
     /**
      * Sends a CREATE request to create a new house.
      * @param parts
@@ -156,6 +164,8 @@ public class SpertaClient {
      * @throws ClassNotFoundException 
      */
     private static void createHouse(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+        //TODO It will be needed to create a symetric key for each section and send them to the server 
+        //These keys should be encrypted with the user's private key
         if (!validateNumArgs(parts, 2, "CREATE <hm>")) return;
         //mandar enum operation create 
         out.writeObject(Operation.CREATE);
@@ -163,6 +173,7 @@ public class SpertaClient {
         out.flush();
         System.out.println("Response: " + in.readObject());
     }
+
     /**
      * Sends an ADD request to add a user to a house section.
      * @param parts
@@ -181,6 +192,7 @@ public class SpertaClient {
         out.flush();
         System.out.println("Response: " + in.readObject());
     }
+
     /**
      * Sends an RD request to register a device in a house section.
      * @param parts
@@ -199,6 +211,7 @@ public class SpertaClient {
         System.out.println("Response: " + in.readObject());
 
     }
+
     /**
      * Sends an EC request to set a device state or timer value.
      * @param parts
@@ -217,6 +230,7 @@ public class SpertaClient {
         out.flush();
         System.out.println("Response: " + in.readObject());
     }
+
     /**
      * Sends an RT request and saves the last state of all devices in a house.
      * @param parts
@@ -237,6 +251,7 @@ public class SpertaClient {
         if (server_response != MessageCodes.OK){System.out.println(); return;}
         generateFile(in, "RT_" + parts[1] + ".txt");
     }
+
     /**
      * Sends an RH request and saves the command history of a device.
      * @param parts
@@ -271,6 +286,7 @@ public class SpertaClient {
         System.out.println("Usage: " + usage);
         return false;
     }
+
     /**
      * Receives data from the server and saves it locally.
      * @param in

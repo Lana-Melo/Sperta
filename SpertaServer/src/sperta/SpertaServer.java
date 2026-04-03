@@ -19,6 +19,7 @@ public class SpertaServer {
     private final ExecutorService pool = java.util.concurrent.Executors.newCachedThreadPool();
     private static final Repository REPOSITORY = Repository.INSTANCE;
     private static final int DEFAULT_PORT_NUMBER = 22345;
+    private static String password; //TODO
 
     /**
      * Main method to start the Sperta server. 
@@ -26,6 +27,10 @@ public class SpertaServer {
      * @param args
      */
     public static void main(String[] args) {
+        //TODO, make sure that the server recognizes the first-boot
+        //There is no correct password if there is no data to load
+        //If there is data to load, before loading (before instancing server)
+        //Verify the data.hash with the given password
         System.out.println("\nStarting Sperta Server...\n");
         SpertaServer server = new SpertaServer();
         int port = server.getPortNumber(args);
@@ -55,7 +60,7 @@ public class SpertaServer {
 
     private int getPortNumber(String[] args) {
         int port = DEFAULT_PORT_NUMBER;
-        if (args.length > 0) {
+        if (args.length == 4) { 
             try {
                 port = Integer.parseInt(args[0]);
             } catch (NumberFormatException e) {

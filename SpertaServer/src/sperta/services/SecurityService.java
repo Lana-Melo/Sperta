@@ -11,7 +11,8 @@ import sperta.utils.LogEntry;
 import sperta.utils.Operation;
 import sperta.utils.SectionType;
 
-public class SecurityService {
+public enum SecurityService {
+    INSTANCE;
 
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
@@ -51,8 +52,8 @@ public class SecurityService {
      * @param u
      * @return
      */
-    public List<SectionType> getUserAccessibleSectionTypes(House h, IUser u){
-        return h.getSections().values().stream()
+    public static List<SectionType> getUserAccessibleSectionTypes(House h, IUser u){
+        return h.getSections().values().stream()  //Should check if user is the house's owner //TODO
                 .filter(section -> section.hasMantainer(u))
                 .map(s -> s.getType())
                 .toList();

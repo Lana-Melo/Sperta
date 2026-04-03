@@ -4,6 +4,7 @@ public abstract class AUser implements IUser {
     protected String userId;
     protected String password;
 
+
     public String getUserId() {
         return userId;
     }
