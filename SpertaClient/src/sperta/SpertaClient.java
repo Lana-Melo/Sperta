@@ -1,6 +1,7 @@
 package sperta;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -15,6 +16,9 @@ import sperta.utils.Operation;
 public class SpertaClient {
 
     private static final int DEFAULT_PORT_NUMBER = 22345;
+
+    private static final File CLIENT_JAR = "SpertaClient.jar";
+
     public static void main(String[] args) {
         /*
          * -> ligar ao server
@@ -39,7 +43,7 @@ public class SpertaClient {
             Socket clientSocket = new Socket(host, port);
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
-            System.out.println("Hello World");
+            
             // atestar
             attestation(out, in, clientSocket);
             // autenticar
@@ -65,14 +69,25 @@ public class SpertaClient {
      * @throws Exception
      */
     private static void attestation(ObjectOutputStream out, ObjectInputStream in, Socket clientSocket) throws Exception {
-        //TODO The jarsize is not used for attestation no more
-        //attestation receives an 8 byte nonce, concatenates the whole content of the jar with said nonce
-        //hashes the result and sends it back
-        long jarSize = new File(SpertaClient.class.getProtectionDomain().getCodeSource().getLocation().toURI()).length(); 
-        out.writeObject((int) jarSize);
+        //get nonce
+        byte[] nonce = new byte[8];
+        if (in.read(nonce) != 8) throw new IOException("Couldn't receive nonce from server");
+        
+        //get fileBytes
+        byte[] fileBytes = new byte[CLIENT_JAR.length() + nonce.length];
+        FileInputStream fis = new FileInputStream(CLIENT_JAR);
+        if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
+        fis.close();
+        
+        //concatenate && hash
+        System.arraycopy(nonce, 0, fileBytes, (int) CLIENT_JAR.length(), nonce.length);
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        String hashed = new String(digest.digest(fileBytes));
+
+        out.writeObject(hashed);
         out.flush();
-        MessageCodes server_response = (MessageCodes) in.readObject();
-        if (server_response == (MessageCodes.OK)) {
+        MessageCodes serverResponse = (MessageCodes) in.readObject();
+        if (serverResponse == (MessageCodes.OK_ATTEST)) {
             System.out.println("ATTESTATION OK");
         } else {
             System.out.println("ATTESTATION FAILED");

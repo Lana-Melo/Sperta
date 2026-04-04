@@ -8,9 +8,14 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -26,6 +31,10 @@ import sperta.utils.*;
  * multiple clients to connect simultaneously.
  */
 public class Controller extends Thread {
+
+    private static SecureRandom random = new SecureRandom();
+    private static final File CLIENT_JAR = "SpertaClient.jar";
+
     private Socket socket = null;
     private IUser currUser;
     private LoggerService logs;
@@ -90,23 +99,28 @@ public class Controller extends Thread {
     private boolean attest(ObjectOutputStream outStream, ObjectInputStream inStream)
             throws IOException, ClassNotFoundException {
 
-        int jarExpectedSize;
-        int jarSize = (int) inStream.readObject();
-        File f = new File("data/attestation.txt");
-        FileInputStream fin = new FileInputStream(f);
+        //get nonce
+        byte[] nonce = new byte[8];
+        random.nextBytes(nonce);
+        outStream.write(nonce);
+        
+        //get fileBytes
+        byte[] fileBytes = new byte[CLIENT_JAR.length() + nonce.length];
+        FileInputStream fis = new FileInputStream(CLIENT_JAR);
+        if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
+        
+        //concatenate && hash
+        System.arraycopy(nonce, 0, fileBytes, (int) CLIENT_JAR.length(), nonce.length);
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        String predictedHash = new String(digest.digest(fileBytes));
 
-        try (BufferedInputStream input = new BufferedInputStream(fin)) {
-            byte[] buffer = new byte[1024];
-            int bytesRead = input.read(buffer);
-            String line = new String(buffer, 0, bytesRead).trim();
-            String[] parts = line.split(":");
-            jarExpectedSize = Integer.parseInt(parts[1]);
-        }
+        //Compare
+        String incommingHash = (String) inStream.readObject();
 
-        outStream.writeObject(jarSize == jarExpectedSize ? MessageCodes.OK_ATTEST : MessageCodes.NOK_ATTEST);
+        outStream.writeObject(predictedHash.equals(incommingHash) ? MessageCodes.OK_ATTEST : MessageCodes.NOK_ATTEST);
         outStream.flush();
 
-        return jarSize == jarExpectedSize;
+        return predictedHash.equals(incommingHash);
     }
 
     /**
