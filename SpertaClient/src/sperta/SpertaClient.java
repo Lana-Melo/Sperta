@@ -1,14 +1,19 @@
 package sperta;
 
+import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.MessageDigest;
 import java.util.Scanner;
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
@@ -17,7 +22,7 @@ public class SpertaClient {
 
     private static final int DEFAULT_PORT_NUMBER = 22345;
 
-    private static final File CLIENT_JAR = "SpertaClient.jar";
+    private static final File CLIENT_JAR = new File("SpertaClient.jar");
 
     public static void main(String[] args) {
         /*
@@ -74,7 +79,7 @@ public class SpertaClient {
         if (in.read(nonce) != 8) throw new IOException("Couldn't receive nonce from server");
         
         //get fileBytes
-        byte[] fileBytes = new byte[CLIENT_JAR.length() + nonce.length];
+        byte[] fileBytes = new byte[ (int) CLIENT_JAR.length() + nonce.length];
         FileInputStream fis = new FileInputStream(CLIENT_JAR);
         if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
         fis.close();
@@ -261,9 +266,9 @@ public class SpertaClient {
         out.writeObject(parts[1]); // <hm>
         out.flush();
 
-        MessageCodes server_response = (MessageCodes) in.readObject();
-        System.out.print("Response: " + server_response);
-        if (server_response != MessageCodes.OK){System.out.println(); return;}
+        MessageCodes serverResponse = (MessageCodes) in.readObject();
+        System.out.print("Response: " + serverResponse);
+        if (serverResponse != MessageCodes.OK){System.out.println(); return;}
         generateFile(in, "RT_" + parts[1] + ".txt");
     }
 
@@ -310,7 +315,7 @@ public class SpertaClient {
      * @throws ClassNotFoundException
      */
     private static void generateFile(ObjectInputStream in, String filename) throws IOException, ClassNotFoundException {
-        long size = (long) in.readObject();
+        long size = (long) in.readObject(); 
         System.out.print(", " + size + " (long), seguido de " + size + " bytes de dados.\n");
         byte[] data = new byte[(int) size];
         in.readFully(data);
@@ -324,4 +329,41 @@ public class SpertaClient {
     }
 
         
+    private boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {
+        
+        outStream.writeLong(f.length());
+        
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] buff = new byte[8192];
+            int n;
+            while ((n = fis.read(buff)) != -1){
+                outStream.write(buff, 0, n);
+            }
+            
+            outStream.flush();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private File readFile(ObjectInputStream inputStream, String pathName) throws IOException{
+        long fsize = inputStream.readLong();
+        File f = new File(pathName);
+        try (FileOutputStream fos = new FileOutputStream(f)){
+            byte[] buff = new byte[8192];
+            long remaining = fsize;
+
+            while (remaining > 0){
+                int toRead = (int) Math.min(buff.length, remaining);
+                int read = inputStream.read(buff, 0, toRead);
+                if (read == -1) throw new EOFException("Stream ended abruptly");
+                fos.write(buff, 0, read);
+                remaining -= read;
+            }
+
+            fos.flush();
+        }
+        return f;
+    }
 }

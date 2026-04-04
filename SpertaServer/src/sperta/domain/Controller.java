@@ -1,21 +1,21 @@
 package sperta.domain;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
+import sperta.utils.Operation;
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -33,7 +33,7 @@ import sperta.utils.*;
 public class Controller extends Thread {
 
     private static SecureRandom random = new SecureRandom();
-    private static final File CLIENT_JAR = "SpertaClient.jar";
+    private static final File CLIENT_JAR = new File("SpertaClient.jar");
 
     private Socket socket = null;
     private IUser currUser;
@@ -76,7 +76,7 @@ public class Controller extends Thread {
 
             socket.close();
 
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e ) {
             try {
                 socket.close();
             } catch (IOException e1) {
@@ -97,17 +97,19 @@ public class Controller extends Thread {
      * @throws ClassNotFoundException
      */
     private boolean attest(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws IOException, ClassNotFoundException {
+            throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
 
         //get nonce
         byte[] nonce = new byte[8];
         random.nextBytes(nonce);
         outStream.write(nonce);
+        outStream.flush();
         
         //get fileBytes
-        byte[] fileBytes = new byte[CLIENT_JAR.length() + nonce.length];
+        byte[] fileBytes = new byte[(int) CLIENT_JAR.length() + nonce.length];
         FileInputStream fis = new FileInputStream(CLIENT_JAR);
         if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
+        fis.close();
         
         //concatenate && hash
         System.arraycopy(nonce, 0, fileBytes, (int) CLIENT_JAR.length(), nonce.length);
@@ -531,6 +533,43 @@ public class Controller extends Thread {
         House house = new House(currUser, hm);
         outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);
         outStream.flush();
+    }
+
+    private boolean sendFile(File f, ObjectOutputStream outStream) throws IOException{
+        outStream.writeLong(f.length());
+        
+        try (FileInputStream fis = new FileInputStream(f)) {
+            byte[] buff = new byte[8192];
+            int n;
+            while ((n = fis.read(buff)) != -1){
+                outStream.write(buff, 0, n);
+            }
+            
+            outStream.flush();
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private File readFile(ObjectInputStream inputStream, String pathName) throws IOException{
+        long fsize = inputStream.readLong();
+        File f = new File(pathName);
+        try (FileOutputStream fos = new FileOutputStream(f)){
+            byte[] buff = new byte[8192];
+            long remaining = fsize;
+
+            while (remaining > 0){
+                int toRead = (int) Math.min(buff.length, remaining);
+                int read = inputStream.read(buff, 0, toRead);
+                if (read == -1) throw new EOFException("Stream ended abruptly");
+                fos.write(buff, 0, read);
+                remaining -= read;
+            }
+
+            fos.flush();
+        }
+        return f;
     }
 
     /**
