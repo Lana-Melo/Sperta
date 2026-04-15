@@ -98,4 +98,8 @@ public enum Repository {
         }
         return homeCatalog.get(houseId);
     }
+
+    public void postUserCertificate(){
+     //TODO   /data/user_certificates
+    }
 }

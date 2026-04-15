@@ -1,6 +1,7 @@
 package sperta;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -8,7 +9,14 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.util.Scanner;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 
@@ -22,28 +30,37 @@ public class SpertaClient {
          * -> autenticar user
          * -> loop dos comandos (interacao user)
          * 
-         * SpertaClient <serverAddress> <user-id> <password>
+         * SpertaClient <serverAddress> <truststore> <password-truststore> <keystore> <password-keystore> <user-id> <password>
          * 
          */
-        if (args.length < 3) {
-            System.out.println("Usage: SpertaClient <serverAddress> <user-id> <password>");
+        if (args.length < 7) {
+            System.out.println("Usage: SpertaClient <serverAddress> <truststore> <password-truststore> <keystore> <password-keystore> <user-id> <password>");
             System.exit(0);
         }
         
         try {
-            String user = args[1];
-            String pass = args[2];
+            String user = args[5];
+            String pass = args[6];
             String host = args[0].contains(":") ? args[0].split(":")[0] : args[0];
             int port = args[0].contains(":") ? Integer.parseInt(args[0].split(":")[1]) : DEFAULT_PORT_NUMBER; 
+            String keystore = args[3];
+            String passwordKeystore = args[4];
+
             
-            Socket clientSocket = new Socket(host, port);
+            System.setProperty("javax.net.ssl.trustStore", args[1]);
+            System.setProperty("javax.net.ssl.trustStorePassword", args[2]);
+
+
+            SocketFactory sf = SSLSocketFactory.getDefault( );
+            SSLSocket clientSocket = (SSLSocket) sf.createSocket(host, port);
+
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
             System.out.println("Hello World");
             // atestar
             attestation(out, in, clientSocket);
             // autenticar
-            autentication(out, in, user, pass);
+            authentication(out, in, user, pass, keystore, passwordKeystore);
             // loop comandos
             userInteraction(out, in);
 
@@ -89,7 +106,7 @@ public class SpertaClient {
      * @param pass
      * @throws Exception
      */
-    private static void autentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass) throws Exception {
+    private static void authentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass, String keystore, String passwordKeystore ) throws Exception {
         Scanner sc = new Scanner(System.in);
         MessageCodes server_response;
         do {
@@ -103,6 +120,16 @@ public class SpertaClient {
             }
         } while (server_response == (MessageCodes.WRONG_PWD));
 
+        if(server_response == (MessageCodes.OK_NEW_USER)){
+            FileInputStream kfile = new FileInputStream(keystore);
+            KeyStore kstore = KeyStore.getInstance("JCEKS");
+            kstore.load(kfile, passwordKeystore.toCharArray()); //password da keystore
+            Certificate cert = kstore.getCertificate("keyRSA");
+
+            ObjectOutputStream outCer = new ObjectOutputStream(out);
+            outCer.writeObject(cert);
+            
+        }
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");
     }
 
