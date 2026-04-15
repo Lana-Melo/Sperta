@@ -1,8 +1,12 @@
 package sperta.services;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import sperta.domain.core.House;
 import sperta.domain.core.ISection;
@@ -13,6 +17,8 @@ import sperta.utils.SectionType;
 
 public enum SecurityService {
     INSTANCE;
+
+    private static final Random RANDOM = new SecureRandom();
 
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
@@ -58,5 +64,29 @@ public enum SecurityService {
                 .map(s -> s.getType())
                 .toList();
     }
+
+    public static byte[] generateSalt() {
+        byte[] salt = new byte[16];
+        RANDOM.nextBytes(salt);
+        return salt;
+  }
+
+    public static byte[] generateHashedPass(byte[] salt, String passwd) {
+        byte [] buf = new byte[salt.length+passwd.getBytes().length];
+        System.arraycopy(passwd.getBytes(), 0, buf, 0, passwd.getBytes().length);
+        System.arraycopy(salt, 0, buf, passwd.getBytes().length, salt.length);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA");
+            byte [] result = md.digest(buf);
+            return result;
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+
+    }
+
+
 
 }
