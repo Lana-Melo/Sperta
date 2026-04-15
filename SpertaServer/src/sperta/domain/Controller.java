@@ -125,7 +125,8 @@ public class Controller extends Thread {
             throws ClassNotFoundException, IOException {
 
         String user;
-        String passwd;
+        String passwd; //ainda quero guardar a pass pra depois gerar o hash
+        byte[] salt;
         MessageCodes msg;
 
         do {
@@ -133,12 +134,22 @@ public class Controller extends Thread {
             passwd = (String) inStream.readObject();
             this.currUser = Repository.INSTANCE.getUserById(user);
             msg = currUser == null ? MessageCodes.OK_NEW_USER
-                    : currUser.getPassword().equals(passwd) ? MessageCodes.OK_USER
+                    : SecurityService.generateHashedPass(currUser.getSalt(), passwd).equals(currUser.getHash()) ? MessageCodes.OK_USER //ao inves de comparar pas vai fazer aquilo de recaulcular hash  e ver se é igual ao q esta guardado
                             : MessageCodes.WRONG_PWD;
 
             if (msg == MessageCodes.OK_NEW_USER) {
-                currUser = new User(user, passwd);
-                Repository.INSTANCE.addUser(new User(user, passwd));
+                //gerar salt
+                salt = SecurityService.generateSalt();
+                //gerar hash 
+                byte[] hashedPass = SecurityService.generateHashedPass(salt,passwd);
+
+                //talvez colocar no security service esa func de gerar salt e gerar hash
+                currUser = new User(user, hashedPass,salt); //mudou agora é com o hash e o salt guardar no user o hash e o salt 
+                Repository.INSTANCE.addUser(currUser);
+
+                //agora a parte do certificado 
+                //o server espera q o client lhe pass o cer
+                //e depois guarda com aquela func postUserCertificate
             }
 
             if (msg == MessageCodes.WRONG_PWD) {

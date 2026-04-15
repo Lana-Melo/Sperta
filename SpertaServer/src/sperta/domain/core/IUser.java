@@ -5,7 +5,11 @@ public interface IUser extends java.io.Serializable, Cloneable{
 
     void setUserId(String userId);
 
-    String getPassword();
+    byte[] getHash();
 
-    void setPassword(String password);
+    void setHash(byte[] hash);
+
+    byte[] getSalt();
+
+    void setSalt(byte[] salt);
 }
