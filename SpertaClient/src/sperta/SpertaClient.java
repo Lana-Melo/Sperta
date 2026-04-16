@@ -51,8 +51,10 @@ public class SpertaClient {
             System.setProperty("javax.net.ssl.trustStorePassword", args[2]);
 
 
-            SocketFactory sf = SSLSocketFactory.getDefault( );
-            SSLSocket clientSocket = (SSLSocket) sf.createSocket(host, port);
+            //SocketFactory sf = SSLSocketFactory.getDefault( );                -> DESCOMENTAR NO FIM, isto é so pra debug e isso
+            //SSLSocket clientSocket = (SSLSocket) sf.createSocket(host, port); 
+
+            Socket clientSocket = new Socket(host, port);
 
             ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
@@ -127,7 +129,7 @@ public class SpertaClient {
             Certificate cert = kstore.getCertificate("keyRSA");
 
             ObjectOutputStream outCer = new ObjectOutputStream(out);
-            outCer.writeObject(cert);
+            outCer.writeObject(cert); //estou a enviar o cert ao server 
             
         }
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");

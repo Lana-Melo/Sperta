@@ -66,10 +66,10 @@ public class SpertaServer {
     private void startServer(int port) {
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
-		try{
-			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
-			SSLServerSocket sSoc = (SSLServerSocket) ssf.createServerSocket(port);
-
+		/*try{
+			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );             -> DESCOMENTAR NO FIM, isto é so pra debug e isso
+			SSLServerSocket sSoc = (SSLServerSocket) ssf.createServerSocket(port);*/
+        try (ServerSocket sSoc = new ServerSocket(port)) {   
             while(true){
                 Socket clienSocket = sSoc.accept();
                 pool.execute(new Controller(clienSocket));
