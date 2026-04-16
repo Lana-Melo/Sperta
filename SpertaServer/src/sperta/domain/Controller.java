@@ -150,6 +150,8 @@ public class Controller extends Thread {
                 //agora a parte do certificado 
                 //o server espera q o client lhe pass o cer
                 //e depois guarda com aquela func postUserCertificate
+                byte [] readedCertBytes = (byte []) inStream.readObject();
+                Repository.INSTANCE.postUserCertificate(user,readedCertBytes);
             }
 
             if (msg == MessageCodes.WRONG_PWD) {

@@ -128,8 +128,11 @@ public class SpertaClient {
             kstore.load(kfile, passwordKeystore.toCharArray()); //password da keystore
             Certificate cert = kstore.getCertificate("keyRSA");
 
-            ObjectOutputStream outCer = new ObjectOutputStream(out);
-            outCer.writeObject(cert); //estou a enviar o cert ao server 
+            //ObjectOutputStream outCer = new ObjectOutputStream(out);
+            //outCer.writeObject(cert); //estou a enviar o cert ao server 
+            
+            byte [] certBytes = cert.getEncoded();
+            out.writeObject(certBytes);
             
         }
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");
