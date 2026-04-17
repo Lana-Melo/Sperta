@@ -13,9 +13,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
-
-import sperta.utils.Operation;
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -33,7 +32,7 @@ import sperta.utils.*;
 public class Controller extends Thread {
 
     private static SecureRandom random = new SecureRandom();
-    private static final File CLIENT_JAR = new File("SpertaClient.jar");
+    private static final File CLIENT_JAR = new File("../../out/SpertaClient.jar");
 
     private Socket socket = null;
     private IUser currUser;
@@ -106,23 +105,32 @@ public class Controller extends Thread {
         outStream.flush();
         
         //get fileBytes
-        byte[] fileBytes = new byte[(int) CLIENT_JAR.length() + nonce.length];
-        FileInputStream fis = new FileInputStream(CLIENT_JAR);
-        if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
-        fis.close();
+        int clientJarLength = (int) CLIENT_JAR.length();
+        byte[] fileBytes = new byte[clientJarLength + nonce.length];
+
+        try (FileInputStream fis = new FileInputStream(CLIENT_JAR)) {
+            int totalRead = 0;
+            int bytesRead = 0;
+            while (totalRead < clientJarLength) {
+                bytesRead = fis.read(fileBytes, totalRead, clientJarLength - totalRead);
+                if (bytesRead == -1) {throw new EOFException("Couldn't read bytes from the JAR");}
+                totalRead += bytesRead;
+            }
+        }
         
         //concatenate && hash
-        System.arraycopy(nonce, 0, fileBytes, (int) CLIENT_JAR.length(), nonce.length);
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        String predictedHash = new String(digest.digest(fileBytes));
+        System.arraycopy(nonce, 0, fileBytes, clientJarLength, nonce.length);
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] predictedHash = md.digest(fileBytes);
 
         //Compare
-        String incommingHash = (String) inStream.readObject();
+        byte[] incomingHash = (byte[]) inStream.readObject();
+        boolean isValid = Arrays.equals(incomingHash, predictedHash);
 
-        outStream.writeObject(predictedHash.equals(incommingHash) ? MessageCodes.OK_ATTEST : MessageCodes.NOK_ATTEST);
+        outStream.writeObject(isValid ? MessageCodes.OK_ATTEST : MessageCodes.NOK_ATTEST);
         outStream.flush();
 
-        return predictedHash.equals(incommingHash);
+        return isValid;
     }
 
     /**
@@ -535,10 +543,9 @@ public class Controller extends Thread {
         outStream.flush();
     }
 
-    private boolean sendFile(File f, ObjectOutputStream outStream) throws IOException{
-        outStream.writeLong(f.length());
-        
+    private boolean sendFile(File f, ObjectOutputStream outStream){        
         try (FileInputStream fis = new FileInputStream(f)) {
+            outStream.writeLong(f.length());
             byte[] buff = new byte[8192];
             int n;
             while ((n = fis.read(buff)) != -1){

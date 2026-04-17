@@ -19,7 +19,7 @@ public class SpertaClient {
 
     private static final int DEFAULT_PORT_NUMBER = 22345;
 
-    private static final File CLIENT_JAR = new File("SpertaClient.jar");
+    private static final File CLIENT_JAR = new File("../../out/SpertaClient.jar");
 
     public static void main(String[] args) {
         /*
@@ -81,8 +81,9 @@ public class SpertaClient {
 
         try (FileInputStream fis = new FileInputStream(CLIENT_JAR)) {
             int totalRead = 0;
+            int bytesRead = 0;
             while (totalRead < jarLength) {
-                int bytesRead = fis.read(fileBytes, totalRead, jarLength - totalRead);
+                bytesRead = fis.read(fileBytes, totalRead, jarLength - totalRead);
                 if (bytesRead == -1) {throw new IOException("Couldn't read bytes from the JAR");}
                 totalRead += bytesRead;
             }
@@ -334,11 +335,9 @@ public class SpertaClient {
     }
 
         
-    private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {
-        
-        outStream.writeLong(f.length());
-        
+    private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {        
         try (FileInputStream fis = new FileInputStream(f)) {
+            outStream.writeLong(f.length());
             byte[] buff = new byte[8192];
             int n;
             while ((n = fis.read(buff)) != -1){
