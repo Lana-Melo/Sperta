@@ -1,15 +1,12 @@
 package sperta;
 
-import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
@@ -76,24 +73,32 @@ public class SpertaClient {
     private static void attestation(ObjectOutputStream out, ObjectInputStream in, Socket clientSocket) throws Exception {
         //get nonce
         byte[] nonce = new byte[8];
-        if (in.read(nonce) != 8) throw new IOException("Couldn't receive nonce from server");
+        in.readFully(nonce);
         
         //get fileBytes
-        byte[] fileBytes = new byte[ (int) CLIENT_JAR.length() + nonce.length];
-        FileInputStream fis = new FileInputStream(CLIENT_JAR);
-        if (fis.read(fileBytes) < CLIENT_JAR.length()) throw new IOException("Coudln't read bytes from the JAR");
-        fis.close();
+        int jarLength = (int) CLIENT_JAR.length();
+        byte[] fileBytes = new byte[jarLength + nonce.length];
+
+        try (FileInputStream fis = new FileInputStream(CLIENT_JAR)) {
+            int totalRead = 0;
+            while (totalRead < jarLength) {
+                int bytesRead = fis.read(fileBytes, totalRead, jarLength - totalRead);
+                if (bytesRead == -1) {throw new IOException("Couldn't read bytes from the JAR");}
+                totalRead += bytesRead;
+            }
+        }
         
         //concatenate && hash
-        System.arraycopy(nonce, 0, fileBytes, (int) CLIENT_JAR.length(), nonce.length);
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        String hashed = new String(digest.digest(fileBytes));
-
+        System.arraycopy(nonce, 0, fileBytes, jarLength, nonce.length);
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] hashed = md.digest(fileBytes);
         out.writeObject(hashed);
         out.flush();
+
+        // receive response from server
         MessageCodes serverResponse = (MessageCodes) in.readObject();
         if (serverResponse == (MessageCodes.OK_ATTEST)) {
-            System.out.println("ATTESTATION OK");
+            System.out.println(serverResponse);
         } else {
             System.out.println("ATTESTATION FAILED");
             clientSocket.close();
@@ -329,7 +334,7 @@ public class SpertaClient {
     }
 
         
-    private boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {
+    private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {
         
         outStream.writeLong(f.length());
         
@@ -347,7 +352,7 @@ public class SpertaClient {
         }
     }
 
-    private File readFile(ObjectInputStream inputStream, String pathName) throws IOException{
+    private static File readFile(ObjectInputStream inputStream, String pathName) throws IOException{
         long fsize = inputStream.readLong();
         File f = new File(pathName);
         try (FileOutputStream fos = new FileOutputStream(f)){
