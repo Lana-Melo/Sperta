@@ -5,7 +5,7 @@ OUT_DIR_CLIENT="$CLIENT_PATH/out/"
 OUT_DIR_SERVER="$SERVER_PATH/out/"
 
 #Prepare 'database'
-rm -r data/
+rm -rf data/
 mkdir -p data/houses data/user_certificates
 
 #Compile

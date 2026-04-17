@@ -2,19 +2,15 @@ package sperta.services;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
 import sperta.domain.core.House;
 import sperta.domain.core.ISection;
@@ -26,7 +22,7 @@ import sperta.utils.SectionType;
 public enum SecurityService {
     INSTANCE;
 
-    private static final String HASH_ALGORYTHM = "SHA-256";
+    private static final String HASH_ALGORITHM = "SHA-256";
 
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
@@ -75,8 +71,9 @@ public enum SecurityService {
 
     /**
      * Assumes filepath is a valid path to a file
-     * Assumes the OS supports SHA-256 encryption
+     * Assumes the runtime supports the SHA-256 hash algorithm
      * Creates a .hash of given file (deleting any that previously existed)
+     * containing the raw 32-byte SHA-256 digest
      * 
      * @param filepath
      * @return created file
@@ -85,7 +82,7 @@ public enum SecurityService {
      *                     but File Operations might throw FileNotFoundException
      */
     public static File writeFileHash(String filepath) throws NoSuchAlgorithmException, IOException {
-        MessageDigest hash = MessageDigest.getInstance(HASH_ALGORYTHM);
+        MessageDigest hash = MessageDigest.getInstance(HASH_ALGORITHM);
         File origin = new File(filepath);
 
         //Give the MessageDigest the content of the file
@@ -110,30 +107,27 @@ public enum SecurityService {
     }
 
 
-    public static boolean checkIfFileWasAltered(String filepath) throws NoSuchAlgorithmException, IOException{
+    public static boolean fileNotCorrupted(String filepath) throws NoSuchAlgorithmException, IOException{
         File hashFile = new File(filepath + ".hash");
         if (!hashFile.exists() || hashFile.length() != 32) return false; //32 bytes is the SHA-256's output
 
-        MessageDigest hash = MessageDigest.getInstance(HASH_ALGORYTHM);
+        MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);
         File file = new File(filepath);
 
         try (FileInputStream fis = new FileInputStream(file)){
             byte[] buff = new byte[8192];
             int n;
             while ((n = fis.read(buff)) != -1){
-                hash.update(buff, 0, n);
+                md.update(buff, 0, n);
             }
         }
 
-        byte[] verification = hash.digest();
+        byte[] verification = md.digest();
         byte[] actual;
         try (FileInputStream fis = new FileInputStream(hashFile)){
             actual = fis.readAllBytes();
         }
 
         return Arrays.equals(actual, verification); // == and .equals() are not good choices, so I opted for this one
-    }
-
-
-
+    }   
 }
