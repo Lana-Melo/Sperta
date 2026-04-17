@@ -28,8 +28,8 @@ public enum Repository {
      * Private constructor to prevent instantiation. Loads existing data from files.
      */
     private Repository() {
-        Persistence.load("./data/users.txt", userCatalog);
-        Persistence.load("./data/homes.txt", homeCatalog);
+        Persistence.load("./SpertaServer/data/users.txt", userCatalog);
+        Persistence.load("./SpertaServer/data/homes.txt", homeCatalog);
     }
 
     /**
@@ -37,8 +37,8 @@ public enum Repository {
      * Should be called before application shutdown.
      */
     public void persist() {
-        Persistence.persist("./data/users.txt", userCatalog);
-        Persistence.persist("./data/homes.txt", homeCatalog);
+        Persistence.persist("./SpertaServer/data/users.txt", userCatalog);
+        Persistence.persist("./SpertaServer/data/homes.txt", homeCatalog);
     }
 
     public void printState() {

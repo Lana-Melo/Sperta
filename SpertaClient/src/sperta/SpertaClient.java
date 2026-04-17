@@ -61,6 +61,8 @@ public class SpertaClient {
             
             // atestar
             attestation(out, in, clientSocket);
+
+            System.out.println("ANTES DE CHAMAR FUN AUTHENTICATION");
             // autenticar
             authentication(out, in, user, pass, keystore, passwordKeystore);
             // loop comandos
@@ -132,6 +134,8 @@ public class SpertaClient {
     private static void authentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass, String keystore, String passwordKeystore ) throws Exception {
         Scanner sc = new Scanner(System.in);
         MessageCodes server_response;
+        System.out.println("Dentro da FUN AUTHENTICATION antes de do");
+
         do {
             out.writeObject(user);
             out.writeObject(pass);
@@ -144,16 +148,18 @@ public class SpertaClient {
         } while (server_response == (MessageCodes.WRONG_PWD));
 
         if(server_response == (MessageCodes.OK_NEW_USER)){
+            System.out.println("Sou um new user e vou mandar meu cert pro server");
             FileInputStream kfile = new FileInputStream(keystore);
-            KeyStore kstore = KeyStore.getInstance("JCEKS");
+            KeyStore kstore = KeyStore.getInstance("PKCS12");
             kstore.load(kfile, passwordKeystore.toCharArray()); //password da keystore
-            Certificate cert = kstore.getCertificate("keyRSA");
+            Certificate cert = kstore.getCertificate(user);
 
             //ObjectOutputStream outCer = new ObjectOutputStream(out);
             //outCer.writeObject(cert); //estou a enviar o cert ao server 
             
             byte [] certBytes = cert.getEncoded();
             out.writeObject(certBytes);
+            System.out.println("ja mandei meu cert pro server");
             
         }
         System.out.println(server_response == (MessageCodes.OK_NEW_USER) ? "New user!" : "Welcome, " + user + "!");
