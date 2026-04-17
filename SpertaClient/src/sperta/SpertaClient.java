@@ -149,16 +149,19 @@ public class SpertaClient {
 
         if(server_response == (MessageCodes.OK_NEW_USER)){
             System.out.println("Sou um new user e vou mandar meu cert pro server");
-            FileInputStream kfile = new FileInputStream(keystore);
+            /*FileInputStream kfile = new FileInputStream(keystore);
             KeyStore kstore = KeyStore.getInstance("PKCS12");
             kstore.load(kfile, passwordKeystore.toCharArray()); //password da keystore
-            Certificate cert = kstore.getCertificate(user);
+            Certificate cert = kstore.getCertificate(user);*/
 
             //ObjectOutputStream outCer = new ObjectOutputStream(out);
             //outCer.writeObject(cert); //estou a enviar o cert ao server 
             
-            byte [] certBytes = cert.getEncoded();
-            out.writeObject(certBytes);
+            //byte [] certBytes = cert.getEncoded();
+            //out.writeObject(certBytes);
+
+            File certFile = new File(keystore.replace("keystore", user + ".cer"));
+            sendFile(certFile, out);
             System.out.println("ja mandei meu cert pro server");
             
         }

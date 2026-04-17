@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -184,7 +185,8 @@ public class Controller extends Thread {
                 // agora a parte do certificado
                 // o server espera q o client lhe pass o cer
                 // e depois guarda com aquela func postUserCertificate
-                byte[] readedCertBytes = (byte[]) inStream.readObject();
+                File certFile = readFile(inStream, "./data/user_certificates/" + user + ".cer");
+                byte[] readedCertBytes = Files.readAllBytes(certFile.toPath());
                 Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 return;
             }
