@@ -1,1 +1,1 @@
-java -jar SpertaServer.jar 
+java -jar SpertaServer/SpertaServer.jar 22345 changeit SpertaServer/security/keystore.server changeit
