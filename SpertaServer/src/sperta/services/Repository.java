@@ -1,5 +1,7 @@
 package sperta.services;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,5 +99,15 @@ public enum Repository {
             return null;
         }
         return homeCatalog.get(houseId);
+    }
+
+    public void postUserCertificate(String userId, byte [] readedCertBytes) throws IOException{
+        //data/user_certificates
+        File certDir = new File("./data/user_certificates");
+        if(!certDir.exists()) certDir.mkdir();
+        File certFile = new File(certDir, userId + ".cer");
+        FileOutputStream fos = new FileOutputStream(certFile);
+        fos.write(readedCertBytes);
+        fos.close();
     }
 }

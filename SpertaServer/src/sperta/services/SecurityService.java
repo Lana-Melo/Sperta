@@ -7,10 +7,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import sperta.domain.core.House;
 import sperta.domain.core.ISection;
@@ -23,6 +25,7 @@ public enum SecurityService {
     INSTANCE;
 
     private static final String HASH_ALGORITHM = "SHA-256";
+    private static final Random RANDOM = new SecureRandom();
 
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
@@ -130,4 +133,27 @@ public enum SecurityService {
 
         return Arrays.equals(actual, verification); // == and .equals() are not good choices, so I opted for this one
     }   
+
+    public static byte[] generateSalt() {
+        byte[] salt = new byte[16];
+        RANDOM.nextBytes(salt);
+        return salt;
+    }
+
+    public static byte[] generateHashedPass(byte[] salt, String passwd) {
+        byte [] buf = new byte[salt.length+passwd.getBytes().length];
+        System.arraycopy(passwd.getBytes(), 0, buf, 0, passwd.getBytes().length);
+        System.arraycopy(salt, 0, buf, passwd.getBytes().length, salt.length);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA");
+            byte [] result = md.digest(buf);
+            return result;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
 }

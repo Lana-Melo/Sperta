@@ -2,8 +2,8 @@ package sperta.domain.core;
 
 public abstract class AUser implements IUser {
     protected String userId;
-    protected String password;
-
+    protected byte[] hash;
+    protected byte[] salt;
 
     public String getUserId() {
         return userId;
@@ -13,12 +13,20 @@ public abstract class AUser implements IUser {
         this.userId = userId;
     }
 
-    public String getPassword() {
-        return password;
+    public byte[] getHash() {
+        return hash;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setHash(byte[] hash) {
+        this.hash = hash;
+    }
+
+    public byte[] getSalt() {
+        return salt;
+    }
+
+    public void setSalt(byte[] salt) {
+        this.salt = salt;
     }
 
 }

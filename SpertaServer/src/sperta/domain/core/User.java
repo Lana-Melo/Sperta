@@ -4,14 +4,16 @@ public class User extends AUser{
     /**
      * Id should be unique, but is never enforced in Domain Logic
      */
-    public User(String id, String pass){
+    public User(String id, byte[] hash, byte[] salt){
         super();
-        this.setPassword(pass);
+        this.setHash(hash);
+        this.setSalt(salt);
         this.setUserId(id);
     }
 
     public User(IUser original){
-        this.password = original.getPassword();
+        this.hash = original.getHash();
+        this.salt = original.getSalt();
         this.userId = original.getUserId();
     }
 
