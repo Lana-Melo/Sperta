@@ -162,7 +162,7 @@ public class Controller extends Thread {
             passwd = (String) inStream.readObject();
             this.currUser = Repository.INSTANCE.getUserById(user);
             msg = currUser == null ? MessageCodes.OK_NEW_USER
-                    : SecurityService.generateHashedPass(currUser.getSalt(), passwd).equals(currUser.getHash())
+                    : Arrays.equals(SecurityService.generateHashedPass(currUser.getSalt(), passwd), currUser.getHash())
                             ? MessageCodes.OK_USER // ao inves de comparar pas vai fazer aquilo de recaulcular hash e
                                                    // ver se é igual ao q esta guardado
                             : MessageCodes.WRONG_PWD;
@@ -192,6 +192,8 @@ public class Controller extends Thread {
             }
 
             if (msg == MessageCodes.WRONG_PWD) {
+                System.out.println("USER RECEBIDO: " + user);
+                System.out.println("PASS RECEBIDA: " + passwd);
                 currUser = null;
             }
 
