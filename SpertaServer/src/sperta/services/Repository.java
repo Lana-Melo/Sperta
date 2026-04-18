@@ -16,7 +16,7 @@ import sperta.utils.Persistence;
 public enum Repository {
     INSTANCE;
 
-    private static final String HOUSE_PATH = "./data/houses/";
+    private static final String HOUSE_PATH = "./SpertaServer/data/houses/";
 
     private Map<String, IUser> userCatalog = new ConcurrentHashMap<>();
     private Map<String, House> homeCatalog = new ConcurrentHashMap<>();
@@ -75,7 +75,6 @@ public enum Repository {
     public boolean addHouse(House house) {
         synchronized (homeLock) {
             if (homeCatalog.containsKey(house.getId())) {
-                //System.out.println("Já tem casa");
                 return false;
             }
             homeCatalog.put(house.getId(), house);

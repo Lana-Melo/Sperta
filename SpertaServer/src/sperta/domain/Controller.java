@@ -568,6 +568,7 @@ public class Controller extends Thread {
         //
         String hm = (String) inStream.readObject();
         House house = new House(currUser, hm);
+        System.out.println("user q esta a tentar criar a casa = " + currUser);
         outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);
         outStream.flush();
     }
