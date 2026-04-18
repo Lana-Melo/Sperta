@@ -563,14 +563,23 @@ public class Controller extends Thread {
      */
     private void create(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
             throws ClassNotFoundException, IOException {
-        // TODO after creating the home, we need to store the home section's symmetric
-        // keys
-        //
         String hm = (String) inStream.readObject();
         House house = new House(currUser, hm);
-        System.out.println("user q esta a tentar criar a casa = " + currUser);
-        outStream.writeObject(Repository.INSTANCE.addHouse(house) ? MessageCodes.OK : MessageCodes.NOK);
+        boolean created = Repository.INSTANCE.addHouse(house);
+        outStream.writeObject(created ? MessageCodes.OK : MessageCodes.NOK);
         outStream.flush();
+
+        if(!created) return;
+
+        for (SectionType section : SectionType.values()) {
+            if (section == SectionType.ALL) continue;
+            byte[] wrappedKey = (byte[]) inStream.readObject(); //client mandou me a key da section cifrada e eu (server) vou guardar 
+            File keyFile = new File("SpertaServer/data/keys/key." + hm + "." + section.name() + "." + currUser.getUserId()); //por equanto vai ficar aqui no data/keys depois vemos qual melhor abordagem 
+            keyFile.getParentFile().mkdirs();
+            try (FileOutputStream fos = new FileOutputStream(keyFile)) {
+                fos.write(wrappedKey);
+            }
+        }
     }
 
     private boolean sendFile(File f, ObjectOutputStream outStream) {

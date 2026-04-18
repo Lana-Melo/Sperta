@@ -10,12 +10,25 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.util.Scanner;
+
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
+import sperta.utils.SectionType;
 
 public class SpertaClient {
 
@@ -64,9 +77,9 @@ public class SpertaClient {
 
             System.out.println("ANTES DE CHAMAR FUN AUTHENTICATION");
             // autenticar
-            authentication(out, in, user, pass, keystore, passwordKeystore);
+            authentication(out, in, user, pass);
             // loop comandos
-            userInteraction(out, in);
+            userInteraction(out, in, user, keystore, passwordKeystore);
 
             clientSocket.close();
 
@@ -131,7 +144,7 @@ public class SpertaClient {
      * @param pass
      * @throws Exception
      */
-    private static void authentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass, String keystore, String passwordKeystore ) throws Exception {
+    private static void authentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass) throws Exception {
         Scanner sc = new Scanner(System.in);
         MessageCodes server_response;
         System.out.println("Dentro da FUN AUTHENTICATION antes de do");
@@ -190,7 +203,7 @@ public class SpertaClient {
      * @param in
      * @throws Exception
      */
-    private static void userInteraction(ObjectOutputStream out, ObjectInputStream in) throws Exception {
+    private static void userInteraction(ObjectOutputStream out, ObjectInputStream in, String user, String keystore, String passwordKeystore) throws Exception {
         Scanner sc = new Scanner(System.in);
         commands();
         System.out.print("Command:");
@@ -200,7 +213,7 @@ public class SpertaClient {
                 if (line.isEmpty()) continue; //pra n fazer split de uma line vazia 
                 String[] parts = line.split("\\s+");
                 switch (parts[0]) {
-                    case "CREATE" -> createHouse(parts,out, in);
+                    case "CREATE" -> createHouse(parts,out, in, user);
                     case "ADD"    -> addUser(parts, out, in);
                     case "RD"     -> registerDevice(parts, out, in);
                     case "EC"     -> sendCommand(parts, out, in);
@@ -224,16 +237,41 @@ public class SpertaClient {
      * @param in
      * @throws IOException 
      * @throws ClassNotFoundException 
+     * @throws CertificateException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     * @throws InvalidKeyException 
+     * @throws IllegalBlockSizeException 
      */
-    private static void createHouse(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void createHouse(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws IOException, ClassNotFoundException, CertificateException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException{
         //TODO It will be needed to create a symetric key for each section and send them to the server 
-        //These keys should be encrypted with the user's private key
+        //These keys should be encrypted with the user's public key
         if (!validateNumArgs(parts, 2, "CREATE <hm>")) return;
         //mandar enum operation create 
         out.writeObject(Operation.CREATE);
         out.writeObject(parts[1]); //<hm>
         out.flush();
-        System.out.println("Response: " + in.readObject());
+
+        MessageCodes response = (MessageCodes) in.readObject();
+        System.out.println("Response: " + response);
+        if (response != MessageCodes.OK) return;
+
+        //ir buscar a chave pub do owner 
+        Certificate cert = CertificateFactory.getInstance("X509").generateCertificate(new FileInputStream("SpertaClient/security/users/" + user + "/" + user + ".cer"));
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.WRAP_MODE, cert.getPublicKey());
+
+        //gerar chave simetrica AES 128 pra cada secção 
+        KeyGenerator kg = KeyGenerator.getInstance("AES");
+        kg.init(128);
+        for(SectionType section : SectionType.values()){
+            if (section == SectionType.ALL) continue;
+            SecretKey sectionKey = kg.generateKey();      // gerar chave da secção
+            byte[] wrappedKey = cipher.wrap(sectionKey);  // cifrar a chave da section com pub key do owner
+            out.writeObject(wrappedKey);
+            out.flush();
+        }
+
     }
 
     /**
