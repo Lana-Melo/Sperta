@@ -160,7 +160,7 @@ public class SpertaClient {
             //byte [] certBytes = cert.getEncoded();
             //out.writeObject(certBytes);
 
-            File certFile = new File(keystore.replace("keystore", user + ".cer"));
+            File certFile = new File("SpertaClient/security/users/" + user + "/" + user + ".cer");
             sendFile(certFile, out);
             System.out.println("ja mandei meu cert pro server");
             

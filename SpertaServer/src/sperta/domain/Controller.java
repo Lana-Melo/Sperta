@@ -178,16 +178,16 @@ public class Controller extends Thread {
                 currUser = new User(user, hashedPass, salt); // mudou agora é com o hash e o salt guardar no user o hash
                                                              // e o salt
                 Repository.INSTANCE.addUser(currUser);
-
+                System.out.println("WEEEEEEEEE");
                 outStream.writeObject(msg);
                 outStream.flush();
-
+                System.out.println("ESTA Porrinha");
                 // agora a parte do certificado
                 // o server espera q o client lhe pass o cer
                 // e depois guarda com aquela func postUserCertificate
-                File certFile = readFile(inStream, "./data/user_certificates/" + user + ".cer");
-                byte[] readedCertBytes = Files.readAllBytes(certFile.toPath());
-                Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
+                File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" + user + ".cer");
+                System.out.println("Saved at: " + certFile.getAbsolutePath());
+                //Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 return;
             }
 
@@ -589,7 +589,9 @@ public class Controller extends Thread {
     }
 
     private File readFile(ObjectInputStream inputStream, String pathName) throws IOException {
+        System.out.println("ANTES DO READLONG");
         long fsize = inputStream.readLong();
+        System.out.println("DEPOIS DO READLONG: " + fsize);
         File f = new File(pathName);
         try (FileOutputStream fos = new FileOutputStream(f)) {
             byte[] buff = new byte[8192];
