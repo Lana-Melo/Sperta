@@ -574,6 +574,7 @@ public class Controller extends Thread {
         for (SectionType section : SectionType.values()) {
             if (section == SectionType.ALL) continue;
             byte[] wrappedKey = (byte[]) inStream.readObject(); //client mandou me a key da section cifrada e eu (server) vou guardar 
+            //receive key metodo auxilar do guilherme novamente é uma linha por isso tavez nao faça sentido 
             File keyFile = new File("SpertaServer/data/keys/key." + hm + "." + section.name() + "." + currUser.getUserId()); //por equanto vai ficar aqui no data/keys depois vemos qual melhor abordagem 
             keyFile.getParentFile().mkdirs();
             try (FileOutputStream fos = new FileOutputStream(keyFile)) {

@@ -268,7 +268,7 @@ public class SpertaClient {
             if (section == SectionType.ALL) continue;
             SecretKey sectionKey = kg.generateKey();      // gerar chave da secção
             byte[] wrappedKey = cipher.wrap(sectionKey);  // cifrar a chave da section com pub key do owner
-            out.writeObject(wrappedKey);
+            out.writeObject(wrappedKey); //sendkey() metodo auxilar q guilherme estava a fazer mas talvez ja nao faça sentido 
             out.flush();
         }
 
