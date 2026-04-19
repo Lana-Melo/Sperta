@@ -101,7 +101,7 @@ public class LoggerService {
      * @return
      */
     public BufferedReader getAllDeviceHistory(House house, Device device)
-        throws SecurityException, NoSuchAlgorithmException, IOException{
+        throws SecurityException, IOException{
         Path devicePath = determineDevicePath(
             device,
             determineHousePath(house).toString()
@@ -174,7 +174,7 @@ public class LoggerService {
      * @throws IOException
      * @throws SecurityException  in case log file has been corrupted in some way
      */
-    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException {
+    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException, SecurityException {
         if (!Files.exists(p)) Files.createFile(p);
         else SecurityService.fileNotCorrupted(p.toString());
         FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file

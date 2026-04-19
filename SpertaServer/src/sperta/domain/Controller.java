@@ -73,7 +73,7 @@ public class Controller extends Thread {
 
             //socket.close(); // -> done in finally
 
-        } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } catch (SecurityException e) {
             throw e;
@@ -214,7 +214,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws ClassNotFoundException, SecurityException, IOException, NoSuchAlgorithmException{
+            throws ClassNotFoundException, SecurityException, IOException {
 
         Operation ope;
         while (true) {
@@ -248,7 +248,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException, SecurityException, NoSuchAlgorithmException{
+            throws ClassNotFoundException, IOException, SecurityException {
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();

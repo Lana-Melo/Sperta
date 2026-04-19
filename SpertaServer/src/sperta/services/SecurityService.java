@@ -28,6 +28,15 @@ public enum SecurityService {
     private static final String HASH_ALGORITHM = "SHA-256";
     private static final Random RANDOM = new SecureRandom();
 
+    private static MessageDigest newSha256Digest() {
+        try {
+            return MessageDigest.getInstance(HASH_ALGORITHM);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is required by every Java implementation, this is not supposed to be thrown
+            throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
+        }
+    }
+
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
             Operation.CREATE,
@@ -85,8 +94,8 @@ public enum SecurityService {
      * @throws IOException might occur when writing and reading from fos or fis
      *                     but File Operations might throw FileNotFoundException
      */
-    public static File writeFileHash(String filepath) throws NoSuchAlgorithmException, IOException {
-        MessageDigest hash = MessageDigest.getInstance(HASH_ALGORITHM);
+    public static File writeFileHash(String filepath) throws IOException {
+        MessageDigest hash = newSha256Digest(); //MessageDigest.getInstance(HASH_ALGORITHM);
         File origin = new File(filepath);
 
         //Give the MessageDigest the content of the file
@@ -118,12 +127,12 @@ public enum SecurityService {
      * @throws IOException                  - IOException if the file couldn't be read or written
      * @throws SecurityException            - If hash didn't match
      */
-    public static void fileNotCorrupted(String filepath) throws NoSuchAlgorithmException, IOException, SecurityException{
+    public static void fileNotCorrupted(String filepath) throws IOException, SecurityException{
         File hashFile = new File(filepath + ".hash");
-        if (!hashFile.exists()) throw new FileNotFoundException("No hash found for this file");
+        if (!hashFile.exists()) throw new SecurityException("No hash found for this file");
         if ( hashFile.length() != 32) throw new SecurityException("The correspondent hash of the file has been corrupted");//32 bytes is the SHA-256's output
 
-        MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);
+        MessageDigest md = newSha256Digest();
         File file = new File(filepath);
 
         try (FileInputStream fis = new FileInputStream(file)){
@@ -155,14 +164,8 @@ public enum SecurityService {
         byte [] buf = new byte[salt.length+passwd.getBytes().length];
         System.arraycopy(passwd.getBytes(), 0, buf, 0, passwd.getBytes().length);
         System.arraycopy(salt, 0, buf, passwd.getBytes().length, salt.length);
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA");
-            byte [] result = md.digest(buf);
-            return result;
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return null;
+        MessageDigest md = newSha256Digest();
+        return md.digest(buf);
     }
 
     

@@ -30,7 +30,7 @@ public enum Repository {
     /**
      * Private constructor to prevent instantiation. Loads existing data from files.
      */
-    private Repository() {
+    private Repository() throws IOException, SecurityException, NoSuchAlgorithmException{
         Persistence.load("./SpertaServer/data/users.txt", userCatalog);
         Persistence.load("./SpertaServer/data/homes.txt", homeCatalog);
     }
@@ -39,7 +39,7 @@ public enum Repository {
      * Persists the current state of users and houses to files. 
      * Should be called before application shutdown.
      */
-    public void persist() {
+    public void persist() throws IOException, SecurityException, NoSuchAlgorithmException{
         Persistence.persist("./SpertaServer/data/users.txt", userCatalog);
         Persistence.persist("./SpertaServer/data/homes.txt", homeCatalog);
     }

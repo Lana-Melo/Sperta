@@ -31,19 +31,18 @@ public class Persistence {
      * @requires the Map type T to be Serializable 
      * 
      */
-    public static <T extends Serializable> void load(String filename, Map<String, T> dest) {
-        try {
-            File file = new File(filename);
-            if(!file.createNewFile()) { // file already exists
-                readFromTo(file, dest);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();   
+    public static <T extends Serializable> void load(String filename, Map<String, T> dest) 
+        throws IOException, SecurityException, NoSuchAlgorithmException {
+        File file = new File(filename);
+        if(!file.createNewFile()) { // file already exists
+            readFromTo(file, dest);
         }
     }
 
-    private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest) {
+    private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest)
+        throws IOException, SecurityException, NoSuchAlgorithmException {
         if (file.length() == 0) return;
+        SecurityService.fileNotCorrupted(file.getPath());
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();
@@ -53,7 +52,9 @@ public class Persistence {
         }
     }
     
-    public static <T extends Serializable> void persist(String filename, Map<String, T> sourceMap) {
+    public static <T extends Serializable> void persist(String filename, Map<String, T> sourceMap)
+        throws IOException, SecurityException, NoSuchAlgorithmException {
+        SecurityService.fileNotCorrupted(filename);
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
             out.writeObject(sourceMap);
         } catch (IOException e) {
@@ -76,7 +77,6 @@ public class Persistence {
         String deviceLogFile = homeFilePath + "/" + device.getType().getLabel() + "/" + device.getType().getLabel() + device.getId() + ".csv";
         Files.createFile((Paths.get(deviceLogFile)));
         SecurityService.writeFileHash(deviceLogFile);
-        
     }
 
 }
