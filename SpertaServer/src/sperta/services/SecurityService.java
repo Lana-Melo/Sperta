@@ -28,7 +28,7 @@ public enum SecurityService {
     private static final String HASH_ALGORITHM = "SHA-256";
     private static final Random RANDOM = new SecureRandom();
 
-    private static MessageDigest newSha256Digest() {
+    public static MessageDigest newSha256Digest() {
         try {
             return MessageDigest.getInstance(HASH_ALGORITHM);
         } catch (NoSuchAlgorithmException e) {
@@ -90,12 +90,11 @@ public enum SecurityService {
      * 
      * @param filepath
      * @return created file
-     * @throws NoSuchAlgorithmException
      * @throws IOException might occur when writing and reading from fos or fis
      *                     but File Operations might throw FileNotFoundException
      */
     public static File writeFileHash(String filepath) throws IOException {
-        MessageDigest hash = newSha256Digest(); //MessageDigest.getInstance(HASH_ALGORITHM);
+        MessageDigest hash = newSha256Digest(); 
         File origin = new File(filepath);
 
         //Give the MessageDigest the content of the file
@@ -123,7 +122,6 @@ public enum SecurityService {
     /**
      * This function throws if a given file has been corrupted, else does nothing
      * @param filepath                      - path to origin file
-     * @throws NoSuchAlgorithmException     - SHA256 algorithm wasn't found
      * @throws IOException                  - IOException if the file couldn't be read or written
      * @throws SecurityException            - If hash didn't match
      */

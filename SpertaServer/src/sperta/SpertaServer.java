@@ -58,6 +58,15 @@ public class SpertaServer {
 
         SpertaServer server = new SpertaServer();
         int port = server.getPortNumber(args);
+        try {
+            REPOSITORY.initialize();
+        } catch (SecurityException e) {
+            System.out.println(MessageCodes.NOK_INTEGRITY);
+            System.exit(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(0);
+        }
         REPOSITORY.printState();
         server.startServer(port);
     }
@@ -69,7 +78,7 @@ public class SpertaServer {
      * @param port the port number to listen on
      */
     private void startServer(int port) {
-        Runtime.getRuntime().addShutdownHook(new Thread(this::endExecution));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
 		/*try{
 			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );             -> DESCOMENTAR NO FIM, isto é so pra debug e isso
@@ -92,7 +101,7 @@ public class SpertaServer {
         } catch (IOException e) {
 		    e.printStackTrace();
 		} 
-
+        System.out.println("HELLO WORLDS");
         shutdown();
     
     }
@@ -137,7 +146,15 @@ public class SpertaServer {
             pool.shutdownNow();
             Thread.currentThread().interrupt();
         }
+
         System.out.println("Persisting data...");
-        REPOSITORY.persist();
+        try {
+            REPOSITORY.persist();
+        } catch (SecurityException e) {
+            System.out.println(MessageCodes.NOK_INTEGRITY);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }

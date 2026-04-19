@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import sperta.domain.core.House;
@@ -28,20 +27,31 @@ public enum Repository {
     private Object homeLock = new Object();
 
     /**
-     * Private constructor to prevent instantiation. Loads existing data from files.
+     * Private constructor to prevent instantiation.
+     * Initialization is explicit and handled by the application layer.
      */
-    private Repository() throws IOException, SecurityException, NoSuchAlgorithmException{
-        Persistence.load("./SpertaServer/data/users.txt", userCatalog);
-        Persistence.load("./SpertaServer/data/homes.txt", homeCatalog);
+    private Repository() {}
+
+    /**
+     * Loads repository data from persistence files.
+     * Caller is responsible for handling startup I/O failures.
+     */
+    public void initialize() throws IOException, SecurityException {
+        synchronized (this) {
+            Persistence.load("./SpertaServer/data/users.txt", userCatalog);
+            Persistence.load("./SpertaServer/data/homes.txt", homeCatalog);
+        }
     }
 
     /**
      * Persists the current state of users and houses to files. 
      * Should be called before application shutdown.
      */
-    public void persist() throws IOException, SecurityException, NoSuchAlgorithmException{
-        Persistence.persist("./SpertaServer/data/users.txt", userCatalog);
-        Persistence.persist("./SpertaServer/data/homes.txt", homeCatalog);
+    public void persist() throws IOException, SecurityException {
+        synchronized (this) {
+            Persistence.persist("./SpertaServer/data/users.txt", userCatalog);
+            Persistence.persist("./SpertaServer/data/homes.txt", homeCatalog);
+        }
     }
 
     public void printState() {
@@ -88,7 +98,7 @@ public enum Repository {
             Persistence.createLogFiles(HOUSES_PATH + "/" + house.getName(),
                 house.getName()
             );
-        } catch (IOException | NoSuchAlgorithmException e) {
+        } catch (IOException e) {
             homeCatalog.remove(house.getId());
             return false;
         }

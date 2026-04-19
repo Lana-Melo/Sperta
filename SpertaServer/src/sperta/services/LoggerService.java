@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -39,7 +38,7 @@ public class LoggerService {
      * @throws IOException
      * @throws SecurityException        In case a log file was corrupted
      */
-    public void insertLog(LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException {
+    public void insertLog(LogEntry log) throws IOException, SecurityException {
         //Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
         Path houseLogPath = determineHousePath(log).resolve(log.getHouse().getName() + ".csv");
         writeLogToFile(houseLogPath, log);
@@ -57,7 +56,7 @@ public class LoggerService {
      * @throws IOException
      */
     public List<String> getLastOperationsOfHouse(House house)
-        throws IOException, SecurityException, NoSuchAlgorithmException {
+        throws IOException, SecurityException {
         List<SectionType> sections = Stream.of(SectionType.values()).toList(); //get all sections
         return getLastOperationsOfHouseBySection(house, sections);
     }
@@ -65,7 +64,7 @@ public class LoggerService {
     public List<String> getLastOperationsOfHouseBySection(
         House house,
         List<SectionType> sections
-    ) throws IOException, SecurityException, NoSuchAlgorithmException {
+    ) throws IOException, SecurityException {
         List<String> logs = new ArrayList<>();
         Path housePath = determineHousePath(house);
         List<String> sCodes = sections
@@ -190,7 +189,7 @@ public class LoggerService {
      * @throws IOException
      * @throws SecurityException         In case the log file has been corrupted in some way
      */
-    private void writeLogToFile(Path p, LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException{
+    private void writeLogToFile(Path p, LogEntry log) throws IOException, SecurityException {
         if (!Files.exists(p)) Files.createFile(p);
         else SecurityService.fileNotCorrupted(p.toString());
         FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file
@@ -207,7 +206,7 @@ public class LoggerService {
      * @return
      * @throws IOException
      */
-    private String readLastLineOfLog(Path pathToLog) throws IOException, SecurityException, NoSuchAlgorithmException {
+    private String readLastLineOfLog(Path pathToLog) throws IOException, SecurityException {
         SecurityService.fileNotCorrupted(pathToLog.toString());
         String lastLine = null;
         try (

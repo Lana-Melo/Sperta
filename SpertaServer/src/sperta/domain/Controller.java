@@ -11,7 +11,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -98,7 +97,7 @@ public class Controller extends Thread {
      * @throws ClassNotFoundException
      */
     private boolean attest(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws IOException, ClassNotFoundException, NoSuchAlgorithmException {
+            throws IOException, ClassNotFoundException {
 
         // get nonce
         byte[] nonce = new byte[8];
@@ -124,7 +123,7 @@ public class Controller extends Thread {
 
         // concatenate && hash
         System.arraycopy(nonce, 0, fileBytes, clientJarLength, nonce.length);
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        MessageDigest md = SecurityService.newSha256Digest();
         byte[] predictedHash = md.digest(fileBytes);
 
         // Compare
@@ -322,7 +321,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException, SecurityException, NoSuchAlgorithmException {
+            throws ClassNotFoundException, IOException, SecurityException {
         String hm = (String) inStream.readObject();
 
         House repoHm = Repository.INSTANCE.getHouseById(hm);
@@ -439,8 +438,6 @@ public class Controller extends Thread {
         device.setState(deviceValue);
         try {
             logs.insertLog(log);
-        } catch (NoSuchAlgorithmException e) {
-            //ingore, but there is no log written | this isn't really a problem unless we change the encryption algorithm
         } catch (Exception e) {
             outStream.writeObject(MessageCodes.NOK_INTEGRITY);
             outStream.flush();
@@ -495,8 +492,6 @@ public class Controller extends Thread {
         try {
             Persistence.createDeviceLogFile(repoHm, repoDevice);
             logs.insertLog(log);
-        } catch (NoSuchAlgorithmException e) {
-            //ingore, but there is no log written | this isn't really a problem unless we change the encryption algorithm
         } catch (Exception e) {
             outStream.writeObject(MessageCodes.NOK_INTEGRITY);
             outStream.flush();

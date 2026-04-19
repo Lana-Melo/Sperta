@@ -8,16 +8,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.stream.Stream;
 import sperta.services.LoggerService;
 import sperta.services.SecurityService;
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
-import sperta.utils.SectionType;
 
 
 public class Persistence {
@@ -32,17 +29,20 @@ public class Persistence {
      * 
      */
     public static <T extends Serializable> void load(String filename, Map<String, T> dest) 
-        throws IOException, SecurityException, NoSuchAlgorithmException {
+        throws IOException, SecurityException {
         File file = new File(filename);
-        if(!file.createNewFile()) { // file already exists
+        boolean fileCreated = file.createNewFile();
+        if(!fileCreated) { // file already exists
             readFromTo(file, dest);
+        } else {
+            SecurityService.writeFileHash(filename);
         }
     }
 
     private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest)
-        throws IOException, SecurityException, NoSuchAlgorithmException {
-        if (file.length() == 0) return;
+        throws IOException, SecurityException {
         SecurityService.fileNotCorrupted(file.getPath());
+        if (file.length() == 0) return;
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();
@@ -53,16 +53,17 @@ public class Persistence {
     }
     
     public static <T extends Serializable> void persist(String filename, Map<String, T> sourceMap)
-        throws IOException, SecurityException, NoSuchAlgorithmException {
+        throws IOException, SecurityException {
         SecurityService.fileNotCorrupted(filename);
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
             out.writeObject(sourceMap);
+            SecurityService.writeFileHash(filename);
         } catch (IOException e) {
             e.printStackTrace();
         }  
     }
 
-    public static void createLogFiles(String filepath, String houseName) throws IOException, NoSuchAlgorithmException{
+    public static void createLogFiles(String filepath, String houseName) throws IOException {
         Files.createDirectory(Paths.get(filepath)); //create home dir
         String houseLogFilePath = filepath + "/" + houseName + ".csv";
         Files.createFile((Paths.get(houseLogFilePath)));
@@ -72,7 +73,7 @@ public class Persistence {
             Files.createDirectory(Paths.get(filepath + "/" + sType.getLabel())); //create dir for every Section Type
         }
     }
-    public static void createDeviceLogFile(House home, Device device) throws IOException, NoSuchAlgorithmException{ 
+    public static void createDeviceLogFile(House home, Device device) throws IOException { 
         String homeFilePath = new LoggerService().determineHousePath(home).toString();
         String deviceLogFile = homeFilePath + "/" + device.getType().getLabel() + "/" + device.getType().getLabel() + device.getId() + ".csv";
         Files.createFile((Paths.get(deviceLogFile)));
