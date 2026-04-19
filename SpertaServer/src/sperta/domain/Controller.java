@@ -51,13 +51,12 @@ public class Controller extends Thread {
      * hook that closes the socket connection.
      */
     @Override
-    public void run() {
+    public void run() throws SecurityException {
         // Setting handler to gracefully shutdown with Ctrl+C
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
-        try {
-            ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+        try (ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+                ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream())) {
 
             // attestation
             if (!attest(outStream, inStream)) {
@@ -72,19 +71,18 @@ public class Controller extends Thread {
             // commands loop
             operations(outStream, inStream);
 
-            outStream.close();
-            inStream.close();
-
-            socket.close();
+            //socket.close(); // -> done in finally
 
         } catch (IOException | ClassNotFoundException | NoSuchAlgorithmException e) {
-            try {
-                socket.close();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            } 
+            e.printStackTrace();
         } catch (SecurityException e) {
             throw e;
+        } finally { //allways close the socket even after an error
+            try {
+                if (!socket.isClosed()) socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -626,7 +624,7 @@ public class Controller extends Thread {
     private void shutdown() {
         System.out.println("\nThread shutting down...");
         try {
-            socket.close();
+            if (!socket.isClosed()) socket.close();
         } catch (IOException e1) {
             e1.printStackTrace();
         }

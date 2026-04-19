@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
@@ -16,6 +17,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import sperta.domain.Controller;
 import sperta.services.Repository;
+import sperta.utils.MessageCodes;
 
 
 /**
@@ -26,6 +28,8 @@ import sperta.services.Repository;
 public class SpertaServer {
 
     private final ExecutorService pool = Executors.newCachedThreadPool(); //java.util.concurrent.Executors.newCachedThreadPool();
+    private AtomicBoolean stopExecution = new AtomicBoolean(false);
+    private ServerSocket serverSocket;
     private static final Repository REPOSITORY = Repository.INSTANCE;
     private static final int DEFAULT_PORT_NUMBER = 22345;
     private static String password; //TODO
@@ -65,22 +69,31 @@ public class SpertaServer {
      * @param port the port number to listen on
      */
     private void startServer(int port) {
-        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::endExecution));
 
 		/*try{
 			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );             -> DESCOMENTAR NO FIM, isto é so pra debug e isso
 			SSLServerSocket sSoc = (SSLServerSocket) ssf.createServerSocket(port);*/
         try (ServerSocket sSoc = new ServerSocket(port)) {   
-            while(true){
+            serverSocket = sSoc;    // Just so it can be referenced when shutting down
+            while(!stopExecution.get()){
                 Socket clienSocket = sSoc.accept();
-                pool.execute(new Controller(clienSocket));
+                //pool.execute(new Controller(clienSocket));
+                pool.execute(() -> { 
+                    try {
+                        new Controller(clienSocket).run();
+                    } catch (SecurityException e) { //thread's upper error handling
+                        //e.printStackTrace();
+                        System.out.println(MessageCodes.NOK_INTEGRITY);
+                        endExecution();
+                    }
+                });
             }
         } catch (IOException e) {
 		    e.printStackTrace();
-		} catch (SecurityException e) {
-            e.printStackTrace();
-            shutdown();
-        }
+		} 
+
+        shutdown();
     
     }
 
@@ -97,13 +110,27 @@ public class SpertaServer {
         return port;
     }
 
+    /**
+     * Cleanly tells the program to end execution
+     */
+    private void endExecution(){
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) 
+                serverSocket.close();
+        } catch (IOException e ) {
+            //e.printStackTrace(); //ignore
+        }
+        stopExecution.set(true);
+    }
+
     private void shutdown(){
         System.out.println("\nShutting down the server...");
+
         pool.shutdown();
         try {
-            if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS)) {
             pool.shutdownNow();
-            if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+            if (!pool.awaitTermination(10, TimeUnit.SECONDS))
                 System.err.println("Pool did not terminate");
             }
         } catch (InterruptedException ie) {
