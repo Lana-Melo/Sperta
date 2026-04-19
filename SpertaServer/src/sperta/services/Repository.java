@@ -3,6 +3,7 @@ package sperta.services;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import sperta.domain.core.House;
@@ -16,7 +17,8 @@ import sperta.utils.Persistence;
 public enum Repository {
     INSTANCE;
 
-    private static final String HOUSE_PATH = "./SpertaServer/data/houses/";
+    private static final String HOUSES_PATH = "./SpertaServer/data/houses/";
+    private static final String USER_CERTS_PATH = "./SpertaServer/data/user_certificates";
 
     private Map<String, IUser> userCatalog = new ConcurrentHashMap<>();
     private Map<String, House> homeCatalog = new ConcurrentHashMap<>();
@@ -82,8 +84,7 @@ public enum Repository {
 
         try {
             // If creating the files wasn't possible, the operation fails
-            Persistence.createLogFiles(
-                HOUSE_PATH + "/" + house.getName(),
+            Persistence.createLogFiles(HOUSES_PATH + "/" + house.getName(),
                 house.getName()
             );
         } catch (IOException e) {
@@ -108,5 +109,20 @@ public enum Repository {
         FileOutputStream fos = new FileOutputStream(certFile);
         fos.write(readedCertBytes);
         fos.close();
+    }
+
+    public byte[] getUserCerByUserId(String userId) {
+        try {
+            File cerFile = new File(USER_CERTS_PATH + "/" + userId + ".cer");
+            return Files.readAllBytes(cerFile.toPath());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
+    public byte[] getSectionKeyByUserId(String userId, String homeId, String sectionLabel) throws Exception {
+        File keyFile = new File(HOUSES_PATH + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId);
+        if (!keyFile.exists()) throw new Exception("Section Key for user not found");
+        return Files.readAllBytes(keyFile.toPath());
     }
 }

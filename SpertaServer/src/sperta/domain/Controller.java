@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -505,45 +504,28 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws ClassNotFoundException
-     * @throws IOException
+     * @throws Exception when the server doesn't find the user certificate
      */
-    private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException {
-        String user = (String) inStream.readObject();
-        String hm = (String) inStream.readObject();
-        String s = (String) inStream.readObject();
+    private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope){
+        try {
+            boolean needCertificate = inStream.readBoolean();
+            String user = (String) inStream.readObject();
+            String hm = (String) inStream.readObject();
+            String s = (String) inStream.readObject();
+            IUser repoUser = Repository.INSTANCE.getUserById(user);
+            House repoHm = Repository.INSTANCE.getHouseById(hm);
 
-        IUser repoUser = Repository.INSTANCE.getUserById(user);
-        if (repoUser == null) {
-            outStream.writeObject(MessageCodes.NOUSER);
+            if(!addOpParamsAreValid(repoUser, repoHm, s, outStream)) {return;}
+            if(needCertificate){sendUserCertificate(repoUser.getUserId(), outStream);}
+            sendOwnerSK(hm, s, outStream);
+            receiveAndImporUserKeyToSection(inStream, hm, s, repoUser.getUserId());
+        
+            repoHm.addMantainerToSection(repoUser, SectionType.ALL.getEnum(s));
+            outStream.writeObject(MessageCodes.OK);
             outStream.flush();
-            return;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        House repoHm = Repository.INSTANCE.getHouseById(hm);
-        if (repoHm == null) {
-            outStream.writeObject(MessageCodes.NOHM);
-            outStream.flush();
-            return;
-        }
-
-        if (SectionType.ALL.getEnum(s) == null) {
-            outStream.writeObject(MessageCodes.NOK);
-            outStream.flush();
-            return;
-        }
-
-        LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repoHm);
-        if (!(SecurityService.checkUserActionPermissions(log))) {
-            outStream.writeObject(MessageCodes.NOPERM);
-            outStream.flush();
-            return;
-        }
-
-        repoHm.addMantainerToSection(repoUser, SectionType.ALL.getEnum(s));
-        outStream.writeObject(MessageCodes.OK);
-        outStream.flush();
     }
 
     /**
@@ -573,13 +555,8 @@ public class Controller extends Thread {
 
         for (SectionType section : SectionType.values()) {
             if (section == SectionType.ALL) continue;
-            byte[] wrappedKey = (byte[]) inStream.readObject(); //client mandou me a key da section cifrada e eu (server) vou guardar 
-            //receive key metodo auxilar do guilherme novamente é uma linha por isso tavez nao faça sentido 
-            File keyFile = new File("SpertaServer/data/keys/" + hm + "/key." + hm + "." + section.name() + "." + currUser.getUserId()); //por equanto vai ficar aqui no data/keys depois vemos qual melhor abordagem 
-            keyFile.getParentFile().mkdirs();
-            try (FileOutputStream fos = new FileOutputStream(keyFile)) {
-                fos.write(wrappedKey);
-            }
+            //Lana aqui: substituir as linhas debaixo para receiveAndImportSectionKey
+            receiveAndImporUserKeyToSection(inStream, hm, section.getLabel(), currUser.getUserId());
         }
     }
 
@@ -632,5 +609,89 @@ public class Controller extends Thread {
         } catch (IOException e1) {
             e1.printStackTrace();
         }
+    }
+
+    private void receiveAndImporUserKeyToSection(ObjectInputStream inStream, String homeId, String sectionLabel, String userId) throws IOException, ClassNotFoundException {
+        System.out.println("Recebendo a chave do mantenedor para a seção " + sectionLabel + " da casa " + homeId);
+        if(SectionType.ALL.getLabel().equals(sectionLabel)) {
+            for(SectionType st : SectionType.values()) {
+                if(st == SectionType.ALL) continue;
+                receiveAndImporUserKeyToSection(inStream, homeId, st.getLabel(), userId);
+            }
+        } else {
+            byte[] wrappedKey = (byte[]) inStream.readObject();
+            File keyFile = new File("SpertaServer/data/houses/" + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId); 
+            keyFile.getParentFile().mkdirs();
+            try (FileOutputStream fos = new FileOutputStream(keyFile)) {
+                fos.write(wrappedKey);
+            }
+        }
+    }
+
+    private void sendOwnerSK(String homeId, String sectionLabel, ObjectOutputStream outStream) throws Exception {
+        if(SectionType.ALL.getLabel().equals(sectionLabel)){
+            System.out.println("sectionLabel é all, vou enviar as chaves de todas as seções");
+            for(SectionType st : SectionType.values()) {
+                if(st == SectionType.ALL) continue;
+                System.out.println("Vou enviar a chave da seção " + st.getLabel());
+                sendUserSecKey(currUser.getUserId(), homeId, st.getLabel(), outStream);
+            }
+        } else {
+            sendUserSecKey(currUser.getUserId(), homeId, sectionLabel, outStream);
+        }
+    }
+
+    private void sendUserSecKey(String userId, String homeId, String sectionLabel, ObjectOutputStream outStream) throws Exception {
+        byte[] keyBytes = Repository.INSTANCE.getSectionKeyByUserId(userId, homeId, sectionLabel);
+        outStream.writeObject(keyBytes);
+        outStream.flush();
+    }
+
+    private void sendUserCertificate(String userId, ObjectOutputStream outStream) throws Exception {
+        System.out.println("Vou enviar o cert do user: " + userId);
+        byte[] certBytes = Repository.INSTANCE.getUserCerByUserId(userId);
+        if (certBytes == null) throw new Exception("User cert not found");
+        outStream.writeObject(certBytes);
+        outStream.flush();
+    }
+
+    /**
+     * Auxiliar function to ADD operation. It receives the required params for the ADD operation, verify if
+     * they are valid and return accordingly. Also, it must receive the OutputStream so it can be capable
+     * to send the right message codes to the client, if any param is invalid.
+     * 
+     * @param repoUser the retrieved user from repository
+     * @param repoHm the retrieved home from repository
+     * @param s the label of the section 
+     * @param outStream the OutputStream that represents the communication channel with the client application 
+     * @return true if all params are valid, so the add operation can be executed. false otherwise.
+     */
+    private boolean addOpParamsAreValid(IUser repoUser, House repoHm, String s, ObjectOutputStream outStream) throws IOException {
+        if (repoUser == null) {
+            outStream.writeObject(MessageCodes.NOUSER);
+            outStream.flush();
+            return false;
+        }
+        
+        if (repoHm == null) {
+            outStream.writeObject(MessageCodes.NOHM);
+            outStream.flush();
+            return false;
+        }
+
+        if (SectionType.ALL.getEnum(s) == null) {
+            outStream.writeObject(MessageCodes.NOK);
+            outStream.flush();
+            return false;
+        }
+
+        LogEntry log = new LogEntry(LocalDateTime.now(), currUser, Operation.ADD, repoHm);
+        if (!(SecurityService.checkUserActionPermissions(log))) {
+            outStream.writeObject(MessageCodes.NOPERM);
+            outStream.flush();
+            return false;
+        }
+
+        return true;
     }
 }

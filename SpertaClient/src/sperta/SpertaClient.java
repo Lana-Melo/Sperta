@@ -1,5 +1,6 @@
 package sperta;
 
+import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,22 +11,15 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
-import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.Scanner;
-
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 import sperta.utils.SectionType;
@@ -35,6 +29,8 @@ public class SpertaClient {
     private static final int DEFAULT_PORT_NUMBER = 22345;
 
     private static final File CLIENT_JAR = new File("SpertaClient/SpertaClient.jar");
+    private static final String USER_SECURITY_LIB = "./SpertaClient/security/users/";
+    private static String SECURITY_PASS = "changeit";
 
     public static void main(String[] args) {
         /*
@@ -76,6 +72,7 @@ public class SpertaClient {
             attestation(out, in, clientSocket);
 
             System.out.println("ANTES DE CHAMAR FUN AUTHENTICATION");
+
             // autenticar
             authentication(out, in, user, pass);
             // loop comandos
@@ -102,7 +99,6 @@ public class SpertaClient {
         //get nonce
         byte[] nonce = new byte[8];
         in.readFully(nonce);
-        System.out.println("aqui");
         
         //get fileBytes
         int jarLength = (int) CLIENT_JAR.length();
@@ -213,8 +209,8 @@ public class SpertaClient {
                 if (line.isEmpty()) continue; //pra n fazer split de uma line vazia 
                 String[] parts = line.split("\\s+");
                 switch (parts[0]) {
-                    case "CREATE" -> createHouse(parts,out, in, user);
-                    case "ADD"    -> addUser(parts, out, in);
+                    case "CREATE" -> createHouse(parts, out, in, user);
+                    case "ADD"    -> addUser(parts, out, in, user);
                     case "RD"     -> registerDevice(parts, out, in);
                     case "EC"     -> sendCommand(parts, out, in);
                     case "RT"     -> receiveLastState(parts, out, in);
@@ -235,19 +231,11 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
-     * @throws CertificateException 
-     * @throws NoSuchPaddingException 
-     * @throws NoSuchAlgorithmException 
-     * @throws InvalidKeyException 
-     * @throws IllegalBlockSizeException 
+     * @throws Exception 
      */
-    private static void createHouse(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws IOException, ClassNotFoundException, CertificateException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException{
-        //TODO It will be needed to create a symetric key for each section and send them to the server 
-        //These keys should be encrypted with the user's public key
+    private static void createHouse(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 2, "CREATE <hm>")) return;
-        //mandar enum operation create 
+
         out.writeObject(Operation.CREATE);
         out.writeObject(parts[1]); //<hm>
         out.flush();
@@ -256,22 +244,7 @@ public class SpertaClient {
         System.out.println("Response: " + response);
         if (response != MessageCodes.OK) return;
 
-        //ir buscar a chave pub do owner 
-        Certificate cert = CertificateFactory.getInstance("X509").generateCertificate(new FileInputStream("SpertaClient/security/users/" + user + "/" + user + ".cer"));
-        Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.WRAP_MODE, cert.getPublicKey());
-
-        //gerar chave simetrica AES 128 pra cada secção 
-        KeyGenerator kg = KeyGenerator.getInstance("AES");
-        kg.init(128);
-        for(SectionType section : SectionType.values()){
-            if (section == SectionType.ALL) continue;
-            SecretKey sectionKey = kg.generateKey();      // gerar chave da secção
-            byte[] wrappedKey = cipher.wrap(sectionKey);  // cifrar a chave da section com pub key do owner
-            out.writeObject(wrappedKey); //sendkey() metodo auxilar q guilherme estava a fazer mas talvez ja nao faça sentido 
-            out.flush();
-        }
-
+        createAndSendSectionKeys(user, out);
     }
 
     /**
@@ -279,18 +252,50 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void addUser(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void addUser(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 4, "ADD <user> <hm> <s>")) return;
-        //mandar enum operation add
+
+        String maintainerId = parts[1];
+        String homeId = parts[2];
+        String sectionLabel = parts[3];
+        boolean needCertificate = getUserCert(maintainerId, user) == null;
+        System.out.println("consegui avaliar se preciso do certificado!!" + "preciso? " + needCertificate);
+
         out.writeObject(Operation.ADD);
-        out.writeObject(parts[1]);  //<user> 
-        out.writeObject(parts[2]);  // <hm>
-        out.writeObject(parts[3]);  // <s>
+        out.writeBoolean(needCertificate);
+        out.writeObject(maintainerId);  //<user> 
+        out.writeObject(homeId);  // <hm>
+        out.writeObject(sectionLabel);  // <s>
         out.flush();
+
+        if(needCertificate){
+            System.out.println("IDENTIFICOU QUE PRECISA DO CERTIFICADO");
+            receiveAndImportUserCert(in, maintainerId, user); 
+        }
+
+        receiveSKAndSendMantainerSK(in, out, maintainerId, user, homeId, sectionLabel);
         System.out.println("Response: " + in.readObject());
+    }
+
+    private static void receiveSKAndSendMantainerSK(ObjectInputStream in, ObjectOutputStream out, String maintainerId,
+            String user, String homeId, String sectionLabel) throws Exception {
+        if(SectionType.ALL.getLabel().equals(sectionLabel)) {
+            System.out.println("sectionLabel é all, vou receber minhas chaves de todas as seções");
+            for(SectionType st : SectionType.values()) {
+                if(st == SectionType.ALL) continue;
+                receiveSKAndSendMantainerSK(in, out, maintainerId, user, homeId, st.getLabel());
+            }
+        } else {
+            System.out.println("Lendo a chave da seção " + sectionLabel + " da casa " + homeId);
+            byte[] wrappedSectionKey = (byte[]) in.readObject();
+            System.out.println("recebi a chave");
+            byte[] mantainerSectionKey = generateMantainerSKFromOwnerSK(maintainerId, user, wrappedSectionKey);
+            System.out.println("Vou mandar a chave do mantenedor para o server");
+            out.writeObject(mantainerSectionKey);
+            out.flush();
+        }
     }
 
     /**
@@ -443,5 +448,88 @@ public class SpertaClient {
             fos.flush();
         }
         return f;
+    }
+    
+    private static byte[] getUserCert(String maintainerId, String user) {
+        try (FileInputStream tstoreFile = new FileInputStream(USER_SECURITY_LIB + "/" + user + "/truststore." + user)) {
+            KeyStore tstore = KeyStore.getInstance("JCEKS");
+            tstore.load(tstoreFile, SECURITY_PASS.toCharArray());
+            Certificate cert = tstore.getCertificate(maintainerId);
+            //System.out.println("cert: " + cert); // null se não encontrou
+            return tstore.getCertificate(maintainerId).getEncoded();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static byte[] generateMantainerSKFromOwnerSK(String mantainer, String owner, byte[] ownerWrappedSK) throws Exception {
+        System.out.println("Gerando a chave do mantenedor a partir da chave do owner");
+        byte[] mantainerCerBytes = getUserCert(mantainer, owner);
+        SecretKey SectionKey = unwrapKeyWithPrivateKey(ownerWrappedSK, owner);
+        return wrapKeyWithPublicKey(SectionKey, mantainerCerBytes);
+    }
+
+    private static SecretKey unwrapKeyWithPrivateKey(byte[] wrappedKey, String owner) throws Exception {
+        KeyStore kstore = KeyStore.getInstance("JCEKS");
+        try (FileInputStream kfile = new FileInputStream(USER_SECURITY_LIB + "/" + owner + "/keystore." + owner)) {
+            kstore.load(kfile, SECURITY_PASS.toCharArray());
+        }
+        PrivateKey privateKey = (PrivateKey) kstore.getKey(owner, SECURITY_PASS.toCharArray());
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.UNWRAP_MODE, privateKey);
+        return (SecretKey) cipher.unwrap(wrappedKey, "AES", Cipher.SECRET_KEY);
+    }
+
+    private static byte[] wrapKeyWithPublicKey(SecretKey key, byte[] cerBytes) throws Exception {
+        Certificate cert = CertificateFactory.getInstance("X.509")
+                .generateCertificate(new ByteArrayInputStream(cerBytes));
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.WRAP_MODE, cert.getPublicKey());
+        return cipher.wrap(key);
+    }
+
+    private static void createAndSendSectionKeys(String ownerId, ObjectOutputStream out) throws Exception {
+        for(SectionType section : SectionType.values()){
+            if (section == SectionType.ALL) continue;
+            byte[] wrappedKey = generateAndWrapKey(ownerId);
+            out.writeObject(wrappedKey); //sendkey() metodo auxilar q guilherme estava a fazer mas talvez ja nao faça sentido 
+            out.flush();
+        }
+    }
+
+    private static byte[] generateAndWrapKey(String user) throws Exception {
+        KeyGenerator kg = KeyGenerator.getInstance("AES");
+        kg.init(128);
+        SecretKey sectionKey = kg.generateKey();
+
+        Certificate cert = CertificateFactory.getInstance("X509")
+                .generateCertificate(new FileInputStream(USER_SECURITY_LIB + "/" + user + "/" + user + ".cer"));
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.WRAP_MODE, cert.getPublicKey());
+        return cipher.wrap(sectionKey);
+    }
+
+
+    private static void receiveAndImportUserCert(ObjectInputStream in, String mantainerId, String user) throws Exception {
+        byte[] certBytes = (byte[]) in.readObject();
+        Certificate userCert = CertificateFactory.getInstance("X.509")
+                .generateCertificate(new ByteArrayInputStream(certBytes));
+        
+        KeyStore tstore = KeyStore.getInstance("JCEKS");
+        File tstoreFile = new File(USER_SECURITY_LIB + "/" + user + "/truststore." + user);
+        
+        if (tstoreFile.exists()) {
+            try (FileInputStream tstoreIn = new FileInputStream(tstoreFile)) {
+                tstore.load(tstoreIn, SECURITY_PASS.toCharArray());
+            }
+        } else {
+            tstore.load(null, SECURITY_PASS.toCharArray()); // cria truststore vazia
+        }
+
+        tstore.setCertificateEntry(mantainerId, userCert);
+        try (FileOutputStream tstoreOut = new FileOutputStream(tstoreFile)) {
+            tstore.store(tstoreOut, SECURITY_PASS.toCharArray());
+            System.out.println("Certificado do mantenedor " + mantainerId + " importado com sucesso para o truststore do usuário " + user);
+        }
     }
 }
