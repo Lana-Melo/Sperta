@@ -73,6 +73,7 @@ public class Persistence {
             Files.createDirectory(Paths.get(filepath + "/" + sType.getLabel())); //create dir for every Section Type
         }
     }
+
     public static void createDeviceLogFile(House home, Device device) throws IOException { 
         String homeFilePath = new LoggerService().determineHousePath(home).toString();
         String deviceLogFile = homeFilePath + "/" + device.getType().getLabel() + "/" + device.getType().getLabel() + device.getId() + ".csv";

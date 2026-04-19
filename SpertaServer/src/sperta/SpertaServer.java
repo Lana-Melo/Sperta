@@ -147,8 +147,8 @@ public class SpertaServer {
             Thread.currentThread().interrupt();
         }
 
-        System.out.println("Persisting data...");
         try {
+            System.out.println("Persisting data...");
             REPOSITORY.persist();
         } catch (SecurityException e) {
             System.out.println(MessageCodes.NOK_INTEGRITY);
