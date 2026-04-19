@@ -57,7 +57,7 @@ public class LoggerService {
      * @throws IOException
      */
     public List<String> getLastOperationsOfHouse(House house)
-        throws IOException {
+        throws IOException, SecurityException, NoSuchAlgorithmException {
         List<SectionType> sections = Stream.of(SectionType.values()).toList(); //get all sections
         return getLastOperationsOfHouseBySection(house, sections);
     }
@@ -65,7 +65,7 @@ public class LoggerService {
     public List<String> getLastOperationsOfHouseBySection(
         House house,
         List<SectionType> sections
-    ) throws IOException {
+    ) throws IOException, SecurityException, NoSuchAlgorithmException {
         List<String> logs = new ArrayList<>();
         Path housePath = determineHousePath(house);
         List<String> sCodes = sections
@@ -76,7 +76,9 @@ public class LoggerService {
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
             //logs.add("For section " + fileType.getName());
             for (File file : fileType.listFiles()) {
-                if (file.getName().endsWith(".csv") && file.length() > 0) {
+                if (file.getName().endsWith(".csv")) { 
+                    SecurityService.fileNotCorrupted(file.toString());
+                    if (file.length() > 0) continue;
                     String lastLine = readLastLineOfLog(file.toPath());
                     logs.add(//this replace firts will remove the extension
                         new StringBuilder().append(file.getName().replaceFirst("\\.csv", ""))
@@ -99,11 +101,12 @@ public class LoggerService {
      * @return
      */
     public BufferedReader getAllDeviceHistory(House house, Device device)
-        throws FileNotFoundException {
+        throws SecurityException, NoSuchAlgorithmException, IOException{
         Path devicePath = determineDevicePath(
             device,
             determineHousePath(house).toString()
         );
+        SecurityService.fileNotCorrupted(devicePath.toString());
         return new BufferedReader(new FileReader(devicePath.toFile()));
     }
 
@@ -204,7 +207,8 @@ public class LoggerService {
      * @return
      * @throws IOException
      */
-    private String readLastLineOfLog(Path pathToLog) throws IOException {
+    private String readLastLineOfLog(Path pathToLog) throws IOException, SecurityException, NoSuchAlgorithmException {
+        SecurityService.fileNotCorrupted(pathToLog.toString());
         String lastLine = null;
         try (
             BufferedReader br = new BufferedReader(

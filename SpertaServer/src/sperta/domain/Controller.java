@@ -214,7 +214,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws ClassNotFoundException, SecurityException, IOException{
+            throws ClassNotFoundException, SecurityException, IOException, NoSuchAlgorithmException{
 
         Operation ope;
         while (true) {
@@ -248,7 +248,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException {
+            throws ClassNotFoundException, IOException, SecurityException, NoSuchAlgorithmException{
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
@@ -322,7 +322,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException {
+            throws ClassNotFoundException, IOException, SecurityException, NoSuchAlgorithmException {
         String hm = (String) inStream.readObject();
 
         House repoHm = Repository.INSTANCE.getHouseById(hm);
