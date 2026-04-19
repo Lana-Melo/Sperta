@@ -1,6 +1,6 @@
 # script para executar quando quisermos resetar as truststores dos users
 
-CLIENT_USERS_SECURITY_LIB_PATH=SpertaClient/data/security/users
+CLIENT_USERS_SECURITY_LIB_PATH=SpertaClient/security/users
 
 echo "Cleaning user truststores..."
 
