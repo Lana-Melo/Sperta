@@ -5,6 +5,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -81,7 +82,9 @@ public class Controller extends Thread {
                 socket.close();
             } catch (IOException e1) {
                 e1.printStackTrace();
-            }
+            } 
+        } catch (SecurityException e) {
+            throw e;
         }
 
     }
@@ -213,7 +216,7 @@ public class Controller extends Thread {
      * @throws IOException
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws ClassNotFoundException, IOException {
+            throws ClassNotFoundException, SecurityException, IOException{
 
         Operation ope;
         while (true) {
@@ -380,11 +383,10 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws ClassNotFoundException
-     * @throws IOException
+     * @throws Exception 
      */
     private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException {
+            throws IOException, ClassNotFoundException, SecurityException{
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
@@ -437,7 +439,15 @@ public class Controller extends Thread {
         }
 
         device.setState(deviceValue);
-        logs.insertLog(log);
+        try {
+            logs.insertLog(log);
+        } catch (NoSuchAlgorithmException e) {
+            //ingore, but there is no log written | this isn't really a problem unless we change the encryption algorithm
+        } catch (Exception e) {
+            outStream.writeObject(MessageCodes.NOK_INTEGRITY);
+            outStream.flush();
+            throw new SecurityException(e.getMessage());
+        } 
         outStream.writeObject(MessageCodes.OK);
         outStream.flush();
     }
@@ -484,11 +494,18 @@ public class Controller extends Thread {
 
         Device repoDevice = repoHm.addDevice(SectionType.ALL.getEnum(s.toUpperCase()));
         log.setDevice(repoDevice);
-        Persistence.createDeviceLogFile(repoHm, repoDevice);
-        logs.insertLog(log);
+        try {
+            Persistence.createDeviceLogFile(repoHm, repoDevice);
+            logs.insertLog(log);
+        } catch (NoSuchAlgorithmException e) {
+            //ingore, but there is no log written | this isn't really a problem unless we change the encryption algorithm
+        } catch (Exception e) {
+            outStream.writeObject(MessageCodes.NOK_INTEGRITY);
+            outStream.flush();
+            throw new SecurityException(e.getMessage());
+        }
         outStream.writeObject(MessageCodes.OK);
         outStream.flush();
-
     }
 
     /**
@@ -523,6 +540,10 @@ public class Controller extends Thread {
             repoHm.addMantainerToSection(repoUser, SectionType.ALL.getEnum(s));
             outStream.writeObject(MessageCodes.OK);
             outStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (SecurityException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
         }

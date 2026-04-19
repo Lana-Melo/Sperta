@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ServerSocketFactory;
@@ -24,7 +25,7 @@ import sperta.services.Repository;
  */
 public class SpertaServer {
 
-    private final ExecutorService pool = java.util.concurrent.Executors.newCachedThreadPool();
+    private final ExecutorService pool = Executors.newCachedThreadPool(); //java.util.concurrent.Executors.newCachedThreadPool();
     private static final Repository REPOSITORY = Repository.INSTANCE;
     private static final int DEFAULT_PORT_NUMBER = 22345;
     private static String password; //TODO
@@ -76,7 +77,10 @@ public class SpertaServer {
             }
         } catch (IOException e) {
 		    e.printStackTrace();
-		}
+		} catch (SecurityException e) {
+            e.printStackTrace();
+            shutdown();
+        }
     
     }
 

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import sperta.domain.core.House;
@@ -87,7 +88,7 @@ public enum Repository {
             Persistence.createLogFiles(HOUSES_PATH + "/" + house.getName(),
                 house.getName()
             );
-        } catch (IOException e) {
+        } catch (IOException | NoSuchAlgorithmException e) {
             homeCatalog.remove(house.getId());
             return false;
         }

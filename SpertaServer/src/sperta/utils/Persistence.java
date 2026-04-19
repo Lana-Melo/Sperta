@@ -10,10 +10,11 @@ import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.stream.Stream;
 import sperta.services.LoggerService;
-
+import sperta.services.SecurityService;
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.utils.SectionType;
@@ -60,17 +61,21 @@ public class Persistence {
         }  
     }
 
-    public static void createLogFiles(String filepath, String houseName) throws IOException{
+    public static void createLogFiles(String filepath, String houseName) throws IOException, NoSuchAlgorithmException{
         Files.createDirectory(Paths.get(filepath)); //create home dir
-        Files.createFile((Paths.get(filepath + "/" + houseName + ".csv")));
+        String houseLogFilePath = filepath + "/" + houseName + ".csv";
+        Files.createFile((Paths.get(houseLogFilePath)));
+        SecurityService.writeFileHash(houseLogFilePath);
         for (SectionType sType : Stream.of(SectionType.values()).toList()){
             if (sType.equals(SectionType.ALL)) continue;
             Files.createDirectory(Paths.get(filepath + "/" + sType.getLabel())); //create dir for every Section Type
         }
     }
-    public static void createDeviceLogFile(House home, Device device) throws IOException{ 
+    public static void createDeviceLogFile(House home, Device device) throws IOException, NoSuchAlgorithmException{ 
         String homeFilePath = new LoggerService().determineHousePath(home).toString();
-        Files.createFile((Paths.get(homeFilePath + "/" + device.getType().getLabel() + "/" + device.getType().getLabel() + device.getId() + ".csv")));
+        String deviceLogFile = homeFilePath + "/" + device.getType().getLabel() + "/" + device.getType().getLabel() + device.getId() + ".csv";
+        Files.createFile((Paths.get(deviceLogFile)));
+        SecurityService.writeFileHash(deviceLogFile);
         
     }
 

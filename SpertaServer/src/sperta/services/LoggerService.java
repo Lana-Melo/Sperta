@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -28,7 +29,7 @@ import sperta.utils.SectionType;
  */
 public class LoggerService {
 
-    private static final String DATA_PATH = "data/houses";
+    private static final String DATA_PATH = "SpertaServer/data/houses";
 
     /**
      * Writes log to respective files, if a file doesn't exist, creates it
@@ -36,8 +37,9 @@ public class LoggerService {
      * Assumes log is a valid entry
      * @param log
      * @throws IOException
+     * @throws SecurityException        In case a log file was corrupted
      */
-    public void insertLog(LogEntry log) throws IOException {
+    public void insertLog(LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException {
         //Path houseLogPath = Paths.get(determineHousePath(log).toString() + "/" + log.getHouse().getName() + ".csv");
         Path houseLogPath = determineHousePath(log).resolve(log.getHouse().getName() + ".csv");
         writeLogToFile(houseLogPath, log);
@@ -167,11 +169,14 @@ public class LoggerService {
      * @param p
      * @param log
      * @throws IOException
+     * @throws SecurityException  in case log file has been corrupted in some way
      */
-    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException {
+    private void writeCsvLogToFile(Path p, LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException {
         if (!Files.exists(p)) Files.createFile(p);
+        else SecurityService.fileNotCorrupted(p.toString());
         FileOutputStream fos = new FileOutputStream(p.toFile(), true); //write to file
         fos.write(log.getCsvString().getBytes());
+        SecurityService.writeFileHash(p.toString());
         fos.close();
     }
 
@@ -180,11 +185,14 @@ public class LoggerService {
      * @param p
      * @param log
      * @throws IOException
+     * @throws SecurityException         In case the log file has been corrupted in some way
      */
-    private void writeLogToFile(Path p, LogEntry log) throws IOException {
+    private void writeLogToFile(Path p, LogEntry log) throws IOException, SecurityException, NoSuchAlgorithmException{
         if (!Files.exists(p)) Files.createFile(p);
+        else SecurityService.fileNotCorrupted(p.toString());
         FileOutputStream fos = new FileOutputStream(p.toFile()); //write to file
         fos.write(log.toString().getBytes()); //DESCOBRIR METODO Q ESCREVE NO FIM DO FICHEIRO
+        SecurityService.writeFileHash(p.toString());
         fos.close();
     }
 

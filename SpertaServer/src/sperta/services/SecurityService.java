@@ -2,6 +2,7 @@ package sperta.services;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -110,9 +111,17 @@ public enum SecurityService {
     }
 
 
-    public static boolean fileNotCorrupted(String filepath) throws NoSuchAlgorithmException, IOException{
+    /**
+     * This function throws if a given file has been corrupted, else does nothing
+     * @param filepath                      - path to origin file
+     * @throws NoSuchAlgorithmException     - SHA256 algorithm wasn't found
+     * @throws IOException                  - IOException if the file couldn't be read or written
+     * @throws SecurityException            - If hash didn't match
+     */
+    public static void fileNotCorrupted(String filepath) throws NoSuchAlgorithmException, IOException, SecurityException{
         File hashFile = new File(filepath + ".hash");
-        if (!hashFile.exists() || hashFile.length() != 32) return false; //32 bytes is the SHA-256's output
+        if (!hashFile.exists()) throw new FileNotFoundException("No hash found for this file");
+        if ( hashFile.length() != 32) throw new SecurityException("The correspondent hash of the file has been corrupted");//32 bytes is the SHA-256's output
 
         MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);
         File file = new File(filepath);
@@ -130,8 +139,10 @@ public enum SecurityService {
         try (FileInputStream fis = new FileInputStream(hashFile)){
             actual = fis.readAllBytes();
         }
+ 
+        boolean corrupted = !Arrays.equals(actual, verification); 
+        if (corrupted) throw new SecurityException("File at: " + filepath + " does not correspond to hash [has probably been corrupted]");
 
-        return Arrays.equals(actual, verification); // == and .equals() are not good choices, so I opted for this one
     }   
 
     public static byte[] generateSalt() {
