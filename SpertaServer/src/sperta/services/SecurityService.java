@@ -6,15 +6,24 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
 import sperta.domain.core.House;
 import sperta.domain.core.ISection;
 import sperta.domain.core.IUser;
@@ -27,15 +36,9 @@ public enum SecurityService {
 
     private static final String HASH_ALGORITHM = "SHA-256";
     private static final Random RANDOM = new SecureRandom();
+    private static SecretKey key;
 
-    public static MessageDigest newSha256Digest() {
-        try {
-            return MessageDigest.getInstance(HASH_ALGORITHM);
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 is required by every Java implementation, this is not supposed to be thrown
-            throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
-        }
-    }
+    
 
     private static final Set<Operation> OWNER_OPERATIONS = 
         Collections.unmodifiableSet(EnumSet.of(
@@ -166,6 +169,56 @@ public enum SecurityService {
         return md.digest(buf);
     }
 
-    
+    public static SecretKey setPBKey(String password){
+        byte[] salt = { (byte) 0x12, (byte) 0x3f, (byte) 0xa1, (byte) 0x33, (byte) 0x81, (byte) 0x3f, (byte) 0xff, (byte) 0x11 };
+        PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 20); // pass, salt, iterations
+        SecretKeyFactory kf = newPBEWithHmacSHA256AndAES128Factory();
+        key = generatePBESecretKey(kf, keySpec); //Sets SecurityService's key
+        return key;
+    }
+
+    public static Cipher getCypher(boolean encryptMode){
+        int mode = (encryptMode) ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE;
+        Cipher c = getChipherPBEWithHmacSHA256AndAES128Instance();
+        try {
+            c.init(mode, key);
+        } catch (InvalidKeyException e) {
+            throw new AssertionError("Invalid key exeption, couldn't initialize cipher");
+        }
+        return c;
+    }
+
+    private static Cipher getChipherPBEWithHmacSHA256AndAES128Instance(){
+        try {
+            return Cipher.getInstance("PBEWithHmacSHA256AndAES_128");
+        } catch ( NoSuchPaddingException| NoSuchAlgorithmException e) {
+            throw new AssertionError("Coudln't get a cipher for such algorithm, is there a typo in security service?");
+        }
+    }
+
+    private static SecretKey generatePBESecretKey(SecretKeyFactory kf, PBEKeySpec keySpec) {
+        try {
+            return kf.generateSecret(keySpec);
+        } catch (InvalidKeySpecException e) {
+            throw new AssertionError("Coudln't gernerate the SecretKey");
+        }
+    }
+
+    private static SecretKeyFactory newPBEWithHmacSHA256AndAES128Factory(){
+        try {
+            return  SecretKeyFactory.getInstance("PBEWithHmacSHA256AndAES_128");
+        } catch (NoSuchAlgorithmException e) {
+            throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
+        }
+    }
+
+    public static MessageDigest newSha256Digest() { 
+        try {
+            return MessageDigest.getInstance(HASH_ALGORITHM);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is required by every Java implementation, this is not supposed to be thrown
+            throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
+        }
+    }
 
 }

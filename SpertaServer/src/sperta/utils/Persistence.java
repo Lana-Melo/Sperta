@@ -42,7 +42,7 @@ public class Persistence {
     private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest)
         throws IOException, SecurityException {
         SecurityService.fileNotCorrupted(file.getPath());
-        if (file.length() == 0) return;
+        if (file.length() == 0) return; //nothing to read
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();

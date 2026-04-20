@@ -8,6 +8,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLServerSocket;
@@ -17,6 +20,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import sperta.domain.Controller;
 import sperta.services.Repository;
+import sperta.services.SecurityService;
 import sperta.utils.MessageCodes;
 
 
@@ -32,7 +36,6 @@ public class SpertaServer {
     private ServerSocket serverSocket;
     private static final Repository REPOSITORY = Repository.INSTANCE;
     private static final int DEFAULT_PORT_NUMBER = 22345;
-    private static String password; //TODO
 
     //SpertaServer <port> <password-cifra> <keystore> <password-keystore>
 
@@ -51,14 +54,18 @@ public class SpertaServer {
             System.exit(0);
         }
 
+        System.out.println("\nStarting Sperta Server...\n");
+        SpertaServer server = new SpertaServer();
+        int port = server.getPortNumber(args); // args[0]
+
+        SecurityService.setPBKey(args[1]); // loads secret key into the system
+
         System.setProperty("javax.net.ssl.keyStore", args[2]); //<keystore>
         System.setProperty("javax.net.ssl.keyStorePassword", args[3]); //<password-keystore>
 
-        System.out.println("\nStarting Sperta Server...\n");
-
-        SpertaServer server = new SpertaServer();
-        int port = server.getPortNumber(args);
+        
         try {
+            System.out.println("Loading Sperta's State...");
             REPOSITORY.initialize();
         } catch (SecurityException e) {
             System.out.println(MessageCodes.NOK_INTEGRITY);
@@ -68,6 +75,8 @@ public class SpertaServer {
             System.exit(0);
         }
         REPOSITORY.printState();
+
+        System.out.println("Opening sockets...");
         server.startServer(port);
     }
 
@@ -101,7 +110,6 @@ public class SpertaServer {
         } catch (IOException e) {
 		    e.printStackTrace();
 		} 
-        System.out.println("HELLO WORLDS");
         shutdown();
     
     }
