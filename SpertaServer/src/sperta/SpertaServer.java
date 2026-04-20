@@ -105,9 +105,7 @@ public class SpertaServer {
                         //e.printStackTrace();
                         System.out.println(MessageCodes.NOK_INTEGRITY);
                         endExecution();
-                    } catch (EOFException e) {
-                        //Ignore if client disconnects
-                    }
+                    } 
                 });
             }
         } catch (IOException e) {

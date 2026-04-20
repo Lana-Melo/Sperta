@@ -11,6 +11,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+
 import sperta.services.LoggerService;
 import sperta.services.SecurityService;
 import sperta.domain.core.Device;
@@ -41,26 +45,39 @@ public class Persistence {
 
     private static <T extends Serializable> void readFromTo(File file, Map<String, T> dest)
         throws IOException, SecurityException {
+
         SecurityService.fileNotCorrupted(file.getPath());
+
         if (file.length() == 0) return; //nothing to read
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+
+        try (FileInputStream fis = new FileInputStream(file)){
+            CipherInputStream cis = SecurityService.getCipherInputStream(fis);
+            ObjectInputStream in = new ObjectInputStream(cis);
+
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();
             dest.putAll(loadedMap);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
+
     }
     
     public static <T extends Serializable> void persist(String filename, Map<String, T> sourceMap)
         throws IOException, SecurityException {
+
         SecurityService.fileNotCorrupted(filename);
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filename))) {
+
+        try (FileOutputStream fos = new FileOutputStream(filename)){
+            CipherOutputStream cos = SecurityService.getCipherOutputStream(fos);
+            ObjectOutputStream out = new ObjectOutputStream(cos);
+
             out.writeObject(sourceMap);
             SecurityService.writeFileHash(filename);
         } catch (IOException e) {
             e.printStackTrace();
         }  
+
     }
 
     public static void createLogFiles(String filepath, String houseName) throws IOException {

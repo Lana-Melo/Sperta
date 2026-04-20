@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -19,6 +21,8 @@ import java.util.Random;
 import java.util.Set;
 
 import javax.crypto.Cipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -177,7 +181,15 @@ public enum SecurityService {
         return key;
     }
 
-    public static Cipher getCypher(boolean encryptMode){
+    public static CipherInputStream getCipherInputStream(InputStream is) {
+        return new CipherInputStream(is, getCipher(false));
+    }
+
+    public static CipherOutputStream getCipherOutputStream(OutputStream os) {
+        return new CipherOutputStream(os, getCipher(true));
+    }
+
+    private static Cipher getCipher(boolean encryptMode){
         int mode = (encryptMode) ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE;
         Cipher c = getChipherPBEWithHmacSHA256AndAES128Instance();
         try {
