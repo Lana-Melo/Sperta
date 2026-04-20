@@ -56,16 +56,16 @@ public class Persistence {
         throws IOException, SecurityException {
 
         SecurityService.fileNotCorrupted(file.getPath());
-        byte[] params = readFilesCipherParams(file);
+        byte[] params = readFilesCipherParams(file); // has side 
         Cipher cipher = SecurityService.getDecriptionCipher(params);
 
         if (file.length() == 0) return; //nothing to read
-        
+        System.out.println("After removing params this is the file length: " + file.length() + file.getName());
 
         try (FileInputStream fis = new FileInputStream(file)){
             CipherInputStream cis = new CipherInputStream(fis, cipher);
             ObjectInputStream in = new ObjectInputStream(cis);
-
+            
             Map<String, T> loadedMap = (Map<String, T>) in.readObject();
             dest.clear();
             dest.putAll(loadedMap);
@@ -74,13 +74,17 @@ public class Persistence {
             e.printStackTrace();
         }
 
+        //SecurityService.writeFileHash(file.getPath()); //after a  readFilesChiperParam, we need to update the hash
     }
     
     public static <T extends Serializable> void persist(String filename, Map<String, T> sourceMap)
         throws IOException, SecurityException {
 
+        System.out.println("Before persisting this is the file length: " + new File(filename).length() + filename);
+        System.out.println("Is file corrupted?");
         SecurityService.fileNotCorrupted(filename);
         
+        //readFilesCipherParams(new File(filename)); //removes old cypher params
         Cipher cipher = SecurityService.getEncriptionCipher();
         try (FileOutputStream fos = new FileOutputStream(filename)){
             CipherOutputStream cos = new CipherOutputStream(fos, cipher);
@@ -133,6 +137,7 @@ public class Persistence {
             //then removes params from the file
             raf.setLength(paramLoc);
         } 
+        SecurityService.writeFileHash(file.toString());
         System.out.println("Read cipher params from file: " + Arrays.toString(params) + " at file: " + file.getPath());
         return params;
     }

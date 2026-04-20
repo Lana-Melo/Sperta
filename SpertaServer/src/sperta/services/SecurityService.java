@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.RandomAccess;
 import java.util.Set;
 
 import javax.crypto.Cipher;
@@ -124,7 +126,7 @@ public enum SecurityService {
         try (FileOutputStream fos = new FileOutputStream(f)){
             fos.write(hashed);
         }
-
+        System.out.println("Hash for file:" + filepath + " : " + Arrays.toString(hashed));
         return f;
     }
 
@@ -143,6 +145,12 @@ public enum SecurityService {
         MessageDigest md = newSha256Digest();
         File file = new File(filepath);
 
+        //long encriptionParam = file.length() - 4;
+        //try (RandomAccessFile raf = new RandomAccessFile(file, "r")){
+        //    raf.seek(encriptionParam);
+        //    encriptionParam -= raf.readInt();
+        //}
+
         try (FileInputStream fis = new FileInputStream(file)){
             byte[] buff = new byte[8192];
             int n;
@@ -150,6 +158,7 @@ public enum SecurityService {
                 md.update(buff, 0, n);
             }
         }
+       
 
         byte[] verification = md.digest();
         byte[] actual;
@@ -157,6 +166,9 @@ public enum SecurityService {
             actual = fis.readAllBytes();
         }
  
+        System.out.println("Comparing hash of " + filepath);
+        System.out.println("verification " + Arrays.toString(verification));
+        System.out.println("actual " + Arrays.toString(actual));
         boolean corrupted = !Arrays.equals(actual, verification); 
         if (corrupted) throw new SecurityException("File at: " + filepath + " does not correspond to hash [has probably been corrupted]");
 
