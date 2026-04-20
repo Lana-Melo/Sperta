@@ -60,6 +60,7 @@ public class SpertaServer {
         int port = server.getPortNumber(args); // args[0]
 
         SecurityService.setPBKey(args[1]); // loads secret key into the system
+        System.out.println(args[1]);
 
         System.setProperty("javax.net.ssl.keyStore", args[2]); //<keystore>
         System.setProperty("javax.net.ssl.keyStorePassword", args[3]); //<password-keystore>
@@ -102,7 +103,8 @@ public class SpertaServer {
                     try {
                         new Controller(clienSocket).run();
                     } catch (SecurityException e) { //thread's upper error handling
-                        //e.printStackTrace();
+                        e.printStackTrace();
+                        System.out.println(e.getMessage()); 
                         System.out.println(MessageCodes.NOK_INTEGRITY);
                         endExecution();
                     } 

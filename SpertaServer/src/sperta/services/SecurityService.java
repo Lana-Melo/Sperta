@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.security.AlgorithmParameters;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -177,25 +180,50 @@ public enum SecurityService {
         byte[] salt = { (byte) 0x12, (byte) 0x3f, (byte) 0xa1, (byte) 0x33, (byte) 0x81, (byte) 0x3f, (byte) 0xff, (byte) 0x11 };
         PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 20); // pass, salt, iterations
         SecretKeyFactory kf = newPBEWithHmacSHA256AndAES128Factory();
-        key = generatePBESecretKey(kf, keySpec); //Sets SecurityService's key
+        SecurityService.key = generatePBESecretKey(kf, keySpec); //Sets SecurityService's key
         return key;
     }
 
-    public static CipherInputStream getCipherInputStream(InputStream is) {
-        return new CipherInputStream(is, getCipher(false));
-    }
+    //public static CipherInputStream getCipherInputStream(InputStream is) {
+    //    return new CipherInputStream(is, getCipher(false));
+    //}
 
-    public static CipherOutputStream getCipherOutputStream(OutputStream os) {
-        return new CipherOutputStream(os, getCipher(true));
-    }
+    //public static CipherOutputStream getCipherOutputStream(OutputStream os) {
+    //    return new CipherOutputStream(os, getCipher(true));
+    //}
 
-    private static Cipher getCipher(boolean encryptMode){
-        int mode = (encryptMode) ? Cipher.ENCRYPT_MODE : Cipher.DECRYPT_MODE;
-        Cipher c = getChipherPBEWithHmacSHA256AndAES128Instance();
+    public static Cipher getDecriptionCipher(byte[] params){
+        System.out.println("Initializing decription cipher with params: " + Arrays.toString(params));
+        AlgorithmParameters p = getAlgorithmParametersPBEWithHmacSHA256AndAES128();
         try {
-            c.init(mode, key);
+            p.init(params);
+        } catch (IOException e) {
+            System.out.println("A");
+            e.printStackTrace();
+            throw new AssertionError("Couldn't initialize decription cypher params");
+        }
+        Cipher d = getChipherPBEWithHmacSHA256AndAES128Instance();
+        try {
+            d.init(Cipher.DECRYPT_MODE, key, p);
         } catch (InvalidKeyException e) {
-            throw new AssertionError("Invalid key exeption, couldn't initialize cipher");
+            System.out.println("B");
+            e.printStackTrace();
+            throw new AssertionError("Coudl't initialize decription cipher");
+        } catch (InvalidAlgorithmParameterException e){
+            e.printStackTrace();
+            throw new AssertionError("Invalid algorithm parameter exception"); //not supposed to be thrown ever
+        }
+        return d;
+    }
+
+    public static Cipher getEncriptionCipher(){
+        Cipher c = getChipherPBEWithHmacSHA256AndAES128Instance();
+        try{
+            c.init(Cipher.ENCRYPT_MODE, key);
+        } catch (InvalidKeyException e) {
+            System.out.println("C");
+            e.printStackTrace();
+            throw new AssertionError("Coudl't initialize encription cipher");
         }
         return c;
     }
@@ -204,6 +232,8 @@ public enum SecurityService {
         try {
             return Cipher.getInstance("PBEWithHmacSHA256AndAES_128");
         } catch ( NoSuchPaddingException| NoSuchAlgorithmException e) {
+            System.out.println("D");
+            e.printStackTrace();
             throw new AssertionError("Coudln't get a cipher for such algorithm, is there a typo in security service?");
         }
     }
@@ -212,6 +242,7 @@ public enum SecurityService {
         try {
             return kf.generateSecret(keySpec);
         } catch (InvalidKeySpecException e) {
+            System.out.println("E");
             throw new AssertionError("Coudln't gernerate the SecretKey");
         }
     }
@@ -220,6 +251,8 @@ public enum SecurityService {
         try {
             return  SecretKeyFactory.getInstance("PBEWithHmacSHA256AndAES_128");
         } catch (NoSuchAlgorithmException e) {
+            System.out.println("F");
+            e.printStackTrace();
             throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
         }
     }
@@ -228,8 +261,20 @@ public enum SecurityService {
         try {
             return MessageDigest.getInstance(HASH_ALGORITHM);
         } catch (NoSuchAlgorithmException e) {
+            System.out.println("G");
+            e.printStackTrace();
             // SHA-256 is required by every Java implementation, this is not supposed to be thrown
             throw new AssertionError("Missing required algorithm: " + HASH_ALGORITHM, e);
+        }
+    }
+
+    public static AlgorithmParameters getAlgorithmParametersPBEWithHmacSHA256AndAES128(){
+        try {
+            return AlgorithmParameters.getInstance("PBEWithHmacSHA256AndAES_128");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println("H");
+            e.printStackTrace();
+            throw new AssertionError("Coudln't get already existing encription/decription parameters");
         }
     }
 

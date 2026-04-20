@@ -235,7 +235,6 @@ public class Controller extends Thread {
      * Handles the RH command from the client. Sends a CSV file with the full
      * command history of a device in a house. Only users with permissions over the
      * device's section can receive this information.
-     * 
      * Command: RH <hm> <d>
      * 
      * Possible responses: - OK: followed by the CSV file with the device history -
