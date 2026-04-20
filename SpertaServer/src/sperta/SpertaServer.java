@@ -1,5 +1,6 @@
 package sperta;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -104,6 +105,8 @@ public class SpertaServer {
                         //e.printStackTrace();
                         System.out.println(MessageCodes.NOK_INTEGRITY);
                         endExecution();
+                    } catch (EOFException e) {
+                        //Ignore if client disconnects
                     }
                 });
             }

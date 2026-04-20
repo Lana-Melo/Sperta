@@ -72,10 +72,12 @@ public class Controller extends Thread {
 
             //socket.close(); // -> done in finally
 
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+        } catch (EOFException e){
+            System.out.println("Client Disconnected, closing socket...");
         } catch (SecurityException e) {
             throw e;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
         } finally { //allways close the socket even after an error
             try {
                 if (!socket.isClosed()) socket.close();
