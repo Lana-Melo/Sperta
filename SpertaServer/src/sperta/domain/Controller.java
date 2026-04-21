@@ -107,6 +107,13 @@ public class Controller extends Thread {
         outStream.write(nonce);
         outStream.flush();
 
+        //ler o jar a partir do atestation.txt assumindo q se mantei no data
+
+
+        //provavelvelmente fazer aquilo dos splits e lala
+        //ficar com o path + nome do ficheiro
+
+
         // get fileBytes
         int clientJarLength = (int) CLIENT_JAR.length();
         byte[] fileBytes = new byte[clientJarLength + nonce.length];
@@ -186,9 +193,12 @@ public class Controller extends Thread {
                 // agora a parte do certificado
                 // o server espera q o client lhe pass o cer
                 // e depois guarda com aquela func postUserCertificate
-                File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" + user + ".cer");
-                System.out.println("Saved at: " + certFile.getAbsolutePath());
+                //File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" + user + ".cer");
+
+                //System.out.println("Saved at: " + certFile.getAbsolutePath());
                 //Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
+                byte [] readedCertBytes = (byte []) inStream.readObject();
+                Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 return;
             }
 
@@ -528,8 +538,23 @@ public class Controller extends Thread {
 
             if(!addOpParamsAreValid(repoUser, repoHm, s, outStream)) {return;}
             if(needCertificate){sendUserCertificate(repoUser.getUserId(), outStream);}
-            sendOwnerSK(hm, s, outStream);
-            receiveAndImporUserKeyToSection(inStream, hm, s, repoUser.getUserId());
+
+            SectionType st = SectionType.ALL.getEnum(s);
+            if(repoHm.getSection(SectionType.ALL).hasMantainer(repoUser) && !st.equals(SectionType.ALL)){
+                outStream.writeBoolean(false); //inidca ao client q ele nao precisa estar à espera da section key
+                for(SectionType section : SectionType.values()){
+                    //para todas as section remover a chave da section do user dessa section 
+                    //a nao ser q seja a section q queremos adicionar
+                    if(section.equals(st) || section.equals(SectionType.ALL)) continue;
+                    Repository.INSTANCE.removeUserKeySection(hm, section.getLabel(), user);
+                }
+            }
+            else{
+                outStream.writeBoolean(true); 
+                sendOwnerSK(hm, s, outStream);
+                receiveAndImporUserKeyToSection(inStream, hm, s, repoUser.getUserId());
+            }
+
         
             repoHm.addMantainerToSection(repoUser, SectionType.ALL.getEnum(s));
             outStream.writeObject(MessageCodes.OK);
@@ -635,11 +660,7 @@ public class Controller extends Thread {
             }
         } else {
             byte[] wrappedKey = (byte[]) inStream.readObject();
-            File keyFile = new File("SpertaServer/data/houses/" + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId); 
-            keyFile.getParentFile().mkdirs();
-            try (FileOutputStream fos = new FileOutputStream(keyFile)) {
-                fos.write(wrappedKey);
-            }
+            Repository.INSTANCE.importUserKeyToSection(wrappedKey,homeId, sectionLabel, userId);
         }
     }
 

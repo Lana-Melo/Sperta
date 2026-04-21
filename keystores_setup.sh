@@ -34,9 +34,6 @@ keytool -genkeypair -alias lana -keyalg RSA -keysize 2048 \
         -storetype JCEKS \
         -storepass $PASS -keypass $PASS -dname "CN=lana"
 
-# exportar cert do lana (para enviar ao servidor no login)
-keytool -exportcert -alias lana -file $CLIENT_USERS_SECURITY_LIB_PATH/lana/lana.cer \
-        -keystore $CLIENT_USERS_SECURITY_LIB_PATH/lana/keystore.lana -storepass $PASS
 
 #--------------------------------------------------------------------------------------------------------------
 # ---- sofia ----
@@ -45,9 +42,6 @@ keytool -genkeypair -alias sofia -keyalg RSA -keysize 2048 \
         -storetype JCEKS \
         -storepass $PASS -keypass $PASS -dname "CN=sofia"
 
-keytool -exportcert -alias sofia -file  $CLIENT_USERS_SECURITY_LIB_PATH/sofia/sofia.cer \
-        -keystore  $CLIENT_USERS_SECURITY_LIB_PATH/sofia/keystore.sofia -storepass $PASS
-
 #--------------------------------------------------------------------------------------------------------------
 # ---- gui ----
 keytool -genkeypair -alias gui -keyalg RSA -keysize 2048 \
@@ -55,5 +49,4 @@ keytool -genkeypair -alias gui -keyalg RSA -keysize 2048 \
         -storetype JCEKS \
         -storepass $PASS -keypass $PASS -dname "CN=gui"
 
-keytool -exportcert -alias gui -file $CLIENT_USERS_SECURITY_LIB_PATH/gui/gui.cer \
-        -keystore $CLIENT_USERS_SECURITY_LIB_PATH/gui/keystore.gui -storepass $PASS
+
