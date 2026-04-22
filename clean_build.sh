@@ -1,4 +1,4 @@
-# TODO
+# TODO - THIS FILE WASN'T TESTED AT ALL
 
 # Cleans trust stores and keys
 
