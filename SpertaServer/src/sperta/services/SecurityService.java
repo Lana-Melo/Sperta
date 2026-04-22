@@ -130,26 +130,58 @@ public enum SecurityService {
         return f;
     }
 
+    public static File writeHashOfFromFile(byte[] bytes, String filepath) throws IOException{
+        MessageDigest hash = newSha256Digest();
+        byte[] hashed = hash.digest(bytes);
+        File f = new File(filepath + ".hash");
+        Files.deleteIfExists(f.toPath());
+        Files.createFile(f.toPath());
+        try (FileOutputStream fos = new FileOutputStream(f)){
+            fos.write(hashed);
+        }
+        System.out.println("Hash for file:" + filepath + " : " + Arrays.toString(hashed));
+        return f;
+    }
 
     /**
-     * This function throws if a given file has been corrupted, else does nothing
+     * This is the function that should be used to see if users.txt and homes.txt are intact
+     * @param filepath
+     * @param fileContent
+     * @throws SecurityException
+     * @throws IOException
+     */
+    public static void fileNotCorrupted(String filepath, byte[] fileContent) throws SecurityException, IOException {
+        File hashFile = getHashFile(filepath); //throws security execption if not found or clearly corrupted
+        MessageDigest md = newSha256Digest();
+
+        md.update(fileContent);
+
+        byte[] given = md.digest();
+        byte[] stored;
+        try (FileInputStream fis = new FileInputStream(hashFile)){
+            stored = fis.readAllBytes();
+        }
+
+        System.out.println("Comparing hash of " + filepath);
+        System.out.println("given " + Arrays.toString(given));
+        System.out.println("stored " + Arrays.toString(stored));
+
+        boolean corrupted = !Arrays.equals(stored, given); 
+        if (corrupted) throw new SecurityException("File at: " + filepath + " does not correspond to stored hash [has probably been corrupted]");
+
+    }
+
+    /**
+     * This function throws if a given file has been corrupted, should only be used for logs
      * @param filepath                      - path to origin file
      * @throws IOException                  - IOException if the file couldn't be read or written
      * @throws SecurityException            - If hash didn't match
      */
     public static void fileNotCorrupted(String filepath) throws IOException, SecurityException{
-        File hashFile = new File(filepath + ".hash");
-        if (!hashFile.exists()) throw new SecurityException("No hash found for this file");
-        if ( hashFile.length() != 32) throw new SecurityException("The correspondent hash of the file has been corrupted");//32 bytes is the SHA-256's output
+        File hashFile = getHashFile(filepath);
 
         MessageDigest md = newSha256Digest();
         File file = new File(filepath);
-
-        //long encriptionParam = file.length() - 4;
-        //try (RandomAccessFile raf = new RandomAccessFile(file, "r")){
-        //    raf.seek(encriptionParam);
-        //    encriptionParam -= raf.readInt();
-        //}
 
         try (FileInputStream fis = new FileInputStream(file)){
             byte[] buff = new byte[8192];
@@ -158,7 +190,6 @@ public enum SecurityService {
                 md.update(buff, 0, n);
             }
         }
-       
 
         byte[] verification = md.digest();
         byte[] actual;
@@ -204,7 +235,7 @@ public enum SecurityService {
     //    return new CipherOutputStream(os, getCipher(true));
     //}
 
-    public static Cipher getDecriptionCipher(byte[] params){
+    public static Cipher getDecryptionCipher(byte[] params){
         System.out.println("Initializing decription cipher with params: " + Arrays.toString(params));
         AlgorithmParameters p = getAlgorithmParametersPBEWithHmacSHA256AndAES128();
         try {
@@ -288,6 +319,14 @@ public enum SecurityService {
             e.printStackTrace();
             throw new AssertionError("Coudln't get already existing encription/decription parameters");
         }
+    }
+
+
+    private static File getHashFile(String filepath) throws SecurityException {
+        File hashFile = new File(filepath + ".hash");
+        if (!hashFile.exists()) throw new SecurityException("No hash found for this file");
+        if ( hashFile.length() != 32) throw new SecurityException("The correspondent hash of the file has been corrupted");//32 bytes is the SHA-256's output
+        return hashFile;
     }
 
 }

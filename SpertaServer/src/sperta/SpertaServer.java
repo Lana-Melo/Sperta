@@ -70,7 +70,8 @@ public class SpertaServer {
             System.out.println("Loading Sperta's State...");
             REPOSITORY.initialize();
         } catch (SecurityException e) {
-            System.out.println(MessageCodes.NOK_INTEGRITY);
+            System.out.println(MessageCodes.NOK_INTEGRITY + " " + e.getMessage());
+            e.printStackTrace();
             System.exit(0);
         } catch (IOException e) {
             e.printStackTrace();
