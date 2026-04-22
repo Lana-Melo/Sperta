@@ -67,18 +67,21 @@ public class LoggerService {
     ) throws IOException, SecurityException {
         List<String> logs = new ArrayList<>();
         Path housePath = determineHousePath(house);
+        System.out.println(housePath.toString());
         List<String> sCodes = sections
             .stream()
             .map(SectionType::getLabel)
             .toList();
         for (File fileType : housePath.toFile().listFiles()) {
+            System.out.println("DENTRO DO FOR");
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
             //logs.add("For section " + fileType.getName());
             for (File file : fileType.listFiles()) {
                 if (file.getName().endsWith(".csv")) { 
                     SecurityService.fileNotCorrupted(file.toString());
-                    if (file.length() > 0) continue;
+                    if (file.length() <= 0) continue;
                     String lastLine = readLastLineOfLog(file.toPath());
+                    System.out.println("Encontrei o conteúdo weeee");
                     logs.add(//this replace firts will remove the extension
                         new StringBuilder().append(file.getName().replaceFirst("\\.csv", ""))
                                            .append(":")

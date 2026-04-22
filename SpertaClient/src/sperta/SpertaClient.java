@@ -11,15 +11,27 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 import sperta.utils.SectionType;
@@ -64,8 +76,10 @@ public class SpertaClient {
             KEYSTORE = args[3];
             KEYSTORE_PASS = args[4];
             
+
             System.setProperty("javax.net.ssl.trustStore", TRUSTSTORE);
             System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
+            System.setProperty("javax.net.ssl.trustStoreType", "JCEKS");
 
 
             //SocketFactory sf = SSLSocketFactory.getDefault( );                -> DESCOMENTAR NO FIM, isto é so pra debug e isso
@@ -207,9 +221,9 @@ public class SpertaClient {
                     case "CREATE" -> createHouse(parts, out, in, user);
                     case "ADD"    -> addUser(parts, out, in, user);
                     case "RD"     -> registerDevice(parts, out, in);
-                    case "EC"     -> sendCommand(parts, out, in);
-                    case "RT"     -> receiveLastState(parts, out, in);
-                    case "RH"     -> receiveHistory(parts, out, in);
+                    case "EC"     -> sendCommand(parts, out, in, user);
+                    case "RT"     -> receiveLastState(parts, out, in, user);
+                    case "RH"     -> receiveHistory(parts, out, in, user);
                     case "help"   -> commands();
                     default       -> System.out.println("Invalid command. Type 'help'.");
                 }
@@ -319,16 +333,42 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void sendCommand(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void sendCommand(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 4, "EC <hm> <d> <int>")) return;
+        int deviceValue;
+        try {
+            deviceValue = Integer.parseInt(parts[3]);
+        }catch (NumberFormatException e) {
+            System.out.println(MessageCodes.NOK);
+            return;
+        }
+        if (deviceValue < 0 || deviceValue > 600) {
+            System.out.println(MessageCodes.NOK);
+            return;
+        }
+
         //mandar enum operation EC
         out.writeObject(Operation.EC);
         out.writeObject(parts[1]);  // <hm>
         out.writeObject(parts[2]);  // <d>
-        out.writeObject(parts[3]); // <int>
+        out.flush();
+
+        MessageCodes response = (MessageCodes) in.readObject();
+        if(response != MessageCodes.OK){
+            System.out.println("Response: " + response);
+            return;
+        }
+
+        
+        byte [] wrappedSectionKey = (byte []) in.readObject();
+        SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, sectionKey);
+        byte [] deviceValueEncrypted = cipher.doFinal(parts[3].getBytes());
+        out.writeObject(deviceValueEncrypted);
         out.flush();
         System.out.println("Response: " + in.readObject());
     }
@@ -338,10 +378,9 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void receiveLastState(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void receiveLastState(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 2, "RT <hm>")) return;
         //mandar enum operation RT
         out.writeObject(Operation.RT);
@@ -351,18 +390,76 @@ public class SpertaClient {
         MessageCodes serverResponse = (MessageCodes) in.readObject();
         System.out.print("Response: " + serverResponse);
         if (serverResponse != MessageCodes.OK){System.out.println(); return;}
-        generateFile(in, "RT_" + parts[1] + ".txt");
+
+        int nKeys = in.readInt();
+        Map<String, SecretKey> sectionKeys = new HashMap<>();
+        for (int i = 0; i < nKeys; i++) {
+            String section = (String) in.readObject();
+            byte [] wrappedSectionKey = (byte []) in.readObject();
+            SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+            sectionKeys.put(section, sectionKey);
+        }
+        generateFile(in, "RT_" + parts[1] + ".txt", sectionKeys);
     }
+    /**
+     * 
+     * @param in
+     * @param filename
+     * @throws IOException 
+     * @throws ClassNotFoundException 
+     */
+    private static void generateFile(ObjectInputStream in, String filename, Map<String, SecretKey> sectionKeys) throws IOException, ClassNotFoundException {
+        long size = (long) in.readObject();
+        byte[] data = new byte[(int) size];
+        in.readFully(data);
+
+        String content = new String(data);
+        StringBuilder result = new StringBuilder();
+
+        for (String line : content.split("\n")) {
+
+            try {
+                String section = line.split("type=")[1].split(",")[0];
+                String stateEnc = line.split("state=")[1].split("}")[0];
+
+                byte[] encrypted = Base64.getDecoder().decode(stateEnc);
+
+                SecretKey key = sectionKeys.get(section);
+
+                byte[] decryptedBytes = decrypt(key, encrypted);
+
+                String state = new String(decryptedBytes, StandardCharsets.UTF_8);
+
+                line = line.replace(stateEnc, state);
+
+            } catch (Exception e) {
+                System.out.println("Erro a processar linha: " + line);
+            }
+
+            result.append(line).append("\n");
+        }
+
+        File dir = new File("SpertaClient/data/clientFiles");
+        if (!dir.exists()) dir.mkdirs();
+
+        File f = new File(dir, filename);
+
+        try (FileOutputStream fos = new FileOutputStream(f)) {
+            fos.write(result.toString().getBytes());
+        }
+
+        System.out.println(result);
+    }
+    
 
     /**
      * Sends an RH request and saves the command history of a device.
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void receiveHistory(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void receiveHistory(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 3, "RH <hm> <d>")) return;
         //mandar enum operation RH
         out.writeObject(Operation.RH);
@@ -373,7 +470,10 @@ public class SpertaClient {
         MessageCodes server_response = (MessageCodes) in.readObject();
         System.out.print("Response: " + server_response);
         if (server_response != MessageCodes.OK){System.out.println(); return;}
-        generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv");
+        byte [] wrappedSectionKey = (byte []) in.readObject();
+        SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+
+        generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv", sectionKey);
     }
 
     /**
@@ -396,20 +496,67 @@ public class SpertaClient {
      * @throws IOException
      * @throws ClassNotFoundException
      */
-    private static void generateFile(ObjectInputStream in, String filename) throws IOException, ClassNotFoundException {
+    private static void generateFile(ObjectInputStream in, String filename,SecretKey sectionKey) throws IOException, ClassNotFoundException {
         long size = (long) in.readObject(); 
         System.out.print(", " + size + " (long), seguido de " + size + " bytes de dados.\n");
         byte[] data = new byte[(int) size];
         in.readFully(data);
-        File dir = new File("data/clientFiles");
+
+        String content = new String(data);
+        StringBuilder result = new StringBuilder();
+        for (String line : content.split("\n")) {
+            if (line.contains("state=")) {
+            try {
+                // extrair parte cifrada
+                int start = line.indexOf("state=") + 6;
+                int end = line.indexOf("}", start);
+                String encryptedBase64 = line.substring(start, end);
+
+                // decode base64 → bytes
+                byte[] encryptedBytes = Base64.getDecoder().decode(encryptedBase64);
+
+                // chamar tua função decrypt
+                byte[] decryptedBytes = decrypt(sectionKey,encryptedBytes);
+
+                //
+                String state = new String(decryptedBytes, StandardCharsets.UTF_8);
+
+                line = line.substring(0, start) + state + line.substring(end);
+
+            } catch (Exception e) {
+                    System.out.println("Erro ao decifrar linha: " + line);
+                }
+            }
+
+            result.append(line).append("\n");
+        }       
+        File dir = new File("SpertaClient/data/clientFiles");
         if (!dir.exists()) dir.mkdirs();
         File f = new File(dir, filename);
-        FileOutputStream f_out = new FileOutputStream(f);
-        f_out.write(data);
-        f_out.close(); 
-        System.out.println(new String(data));
+
+        try (FileOutputStream f_out = new FileOutputStream(f)) {
+            f_out.write(result.toString().getBytes());
+        }
+        System.out.println(result.toString());
     }
 
+    /**
+     * 
+     * @param sectionKey
+     * @param encryptedBytes
+     * @return
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws InvalidKeyException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     */
+    private static byte [] decrypt(SecretKey sectionKey, byte [] encryptedBytes) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, sectionKey);
+        return cipher.doFinal(encryptedBytes);
+        
+    }
         
     private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {        
         try (FileInputStream fis = new FileInputStream(f)) {

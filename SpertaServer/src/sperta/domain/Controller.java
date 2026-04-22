@@ -68,7 +68,12 @@ public class Controller extends Thread {
             authenticate(outStream, inStream);
 
             // commands loop
-            operations(outStream, inStream);
+            try {
+                operations(outStream, inStream);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
 
             //socket.close(); // -> done in finally
 
@@ -221,11 +226,10 @@ public class Controller extends Thread {
      * 
      * @param outStream
      * @param inStream
-     * @throws ClassNotFoundException
-     * @throws IOException
+     * @throws Exception 
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws ClassNotFoundException, SecurityException, IOException {
+            throws Exception {
 
         Operation ope;
         while (true) {
@@ -254,11 +258,10 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws ClassNotFoundException
-     * @throws IOException
+     * @throws Exception 
      */
     private void rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException, SecurityException {
+            throws Exception {
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
@@ -308,6 +311,8 @@ public class Controller extends Thread {
             return;
         }
         outStream.writeObject(MessageCodes.OK);
+        byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
+        outStream.writeObject(sectionKey);
         outStream.writeObject((long) data.length);
         outStream.write(data);
         outStream.flush();
@@ -328,11 +333,10 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws ClassNotFoundException
-     * @throws IOException
+     * @throws Exception 
      */
     private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws ClassNotFoundException, IOException, SecurityException {
+            throws Exception {
         String hm = (String) inStream.readObject();
 
         House repoHm = Repository.INSTANCE.getHouseById(hm);
@@ -350,27 +354,35 @@ public class Controller extends Thread {
         }
 
         List<String> logContent;
+        List<SectionType> userSections = null;
         if (repoHm.getOwner().equals(currUser)) {
             logContent = new LoggerService().getLastOperationsOfHouse(repoHm);
+            System.out.println("SOU O OWNER");
+            userSections = Arrays.stream(SectionType.values())
+                            .filter(st -> st != SectionType.ALL)
+                            .toList();
         } else {
-            // List<SectionType> userSections = new ArrayList<>();
-            // for (SectionType st : SectionType.values()) {
-            // if (st == SectionType.ALL)
-            // continue;
-            // if (repoHm.getSection(st).hasMantainer(currUser))
-            // userSections.add(st);
-            // }
-            List<SectionType> userSections = SecurityService.getUserAccessibleSectionTypes(repoHm, currUser);
+
+            userSections = SecurityService.getUserAccessibleSectionTypes(repoHm, currUser);
             logContent = new LoggerService().getLastOperationsOfHouseBySection(repoHm, userSections);
         }
 
         byte[] data = String.join("\n", logContent).getBytes();
         if (data.length == 0) {
+            System.out.println("data length é zero que pena");
             outStream.writeObject(MessageCodes.NODATA);
             outStream.flush();
             return;
         }
         outStream.writeObject(MessageCodes.OK);
+        outStream.writeInt(userSections.size());
+        for (SectionType st : userSections) {
+            if (st == SectionType.ALL) continue;
+            byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, st.getLabel());
+            outStream.writeObject(st.getLabel());
+            outStream.writeObject(sectionKey);
+        }
+
         outStream.writeObject((long) data.length);
         outStream.write(data);
         outStream.flush();
@@ -394,26 +406,11 @@ public class Controller extends Thread {
      * @throws Exception 
      */
     private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws IOException, ClassNotFoundException, SecurityException{
+            throws Exception{
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
-        String value = (String) inStream.readObject();
-
-        int deviceValue;
-        try {
-            deviceValue = Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            outStream.writeObject(MessageCodes.NOK);
-            outStream.flush();
-            return;
-        }
-        if (deviceValue < 0 || deviceValue > 600) {
-            outStream.writeObject(MessageCodes.NOK);
-            outStream.flush();
-            return;
-        }
-
+        
         House repoHm = Repository.INSTANCE.getHouseById(hm);
         if (repoHm == null) {
             outStream.writeObject(MessageCodes.NOHM);
@@ -436,9 +433,9 @@ public class Controller extends Thread {
             return;
         }
 
+
         LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repoHm);
         log.setDevice(device);
-        log.setDevicesValue(deviceValue);
         log.setSectionType(SectionType.ALL.getEnum(sectionLabel));
         if (!SecurityService.checkUserActionPermissions(log)) {
             outStream.writeObject(MessageCodes.NOPERM);
@@ -446,7 +443,15 @@ public class Controller extends Thread {
             return;
         }
 
-        device.setState(deviceValue);
+        outStream.writeObject(MessageCodes.OK);
+
+        byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
+        outStream.writeObject(sectionKey);
+
+        byte [] encryptedDeviceValue = (byte []) inStream.readObject();
+
+        log.setDevicesValue(encryptedDeviceValue);
+        device.setState(encryptedDeviceValue);
         try {
             logs.insertLog(log);
         } catch (Exception e) {

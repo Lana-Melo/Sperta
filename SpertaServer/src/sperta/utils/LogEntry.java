@@ -1,6 +1,8 @@
 package sperta.utils;
 
 import java.time.LocalDateTime;
+import java.util.Base64;
+
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -30,7 +32,7 @@ public class LogEntry {
     private IUser addedUser;
     private SectionType sectionType;
     private Device device;
-    private Integer devicesValue;
+    private byte [] devicesValue;
 
     public LogEntry(LocalDateTime timestamp, IUser user, Operation op, House house){
         this.timestamp = timestamp;
@@ -100,11 +102,11 @@ public class LogEntry {
         this.device = device;
     }
 
-    public Integer getDevicesValue() {
+    public byte [] getDevicesValue() {
         return devicesValue;
     }
 
-    public void setDevicesValue(int devicesValue) {
+    public void setDevicesValue(byte [] devicesValue) {
         this.devicesValue = devicesValue;
     }
 
@@ -116,8 +118,8 @@ public class LogEntry {
             .append(house.getName()).append(",")
             //.append(addedUser).append(",")
             //.append(sectionType).append(",")
-            .append(device).append(",")
-            .append(devicesValue == null ?  0 : devicesValue)
+            .append(device)
+            //.append(devicesValue == null ?  0 : Base64.getEncoder().encodeToString(devicesValue))
             .append("\n")
             .toString();
     }
@@ -132,7 +134,7 @@ public class LogEntry {
         } else if (operation == Operation.RD){
             sb.append(sectionType + " # Registar Dispositivo");
         } else if (operation == Operation.EC){
-            sb.append(device + " " + devicesValue + " # Editar Valor");
+            sb.append(device + " # Editar Valor");
         } else if (operation == Operation.RT){
             sb.append("# Receber Info sobre Casa");
         } else if (operation == Operation.RH){
