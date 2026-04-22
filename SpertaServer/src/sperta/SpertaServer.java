@@ -45,7 +45,7 @@ public class SpertaServer {
      * Determines the port number to listen on, loads backup data, and starts the server.
      * @param args
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, SecurityException {
         
         if (args.length < 4) {
             System.out.println("Usage: SpertaServer <port> <password-cifra> <keystore> <password-keystore>");
@@ -69,10 +69,8 @@ public class SpertaServer {
             System.out.println(MessageCodes.NOK_INTEGRITY + " " + e.getMessage());
             e.printStackTrace();
             System.exit(0);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(0);
-        }
+        } 
+
         REPOSITORY.printState();
 
         Controller.loadAttestationFile(); 

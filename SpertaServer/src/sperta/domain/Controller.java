@@ -35,7 +35,7 @@ import sperta.utils.*;
 public class Controller extends Thread {
 
     private static SecureRandom random = new SecureRandom();
-    private static final String ATTESTATION_INSTRUCTION_FILE = "SpertaServer/attestation.txt";
+    private static final String ATTESTATION_INSTRUCTION_FILE = "SpertaServer/security/attestation.txt";
     private static File attestationFile; 
 
     private Socket socket = null;
@@ -47,7 +47,7 @@ public class Controller extends Thread {
         logs = new LoggerService();
     }
 
-    public static void loadAttestationFile() throws SecurityException {
+    public static void loadAttestationFile() throws SecurityException, IOException {
         byte[] contents = SecurityService.loadContentsOfEncryptedFile(ATTESTATION_INSTRUCTION_FILE);
         String pathToAttestationFile = new String(contents);
         Controller.attestationFile = new File(pathToAttestationFile);
