@@ -15,6 +15,9 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+
+import javax.crypto.Cipher;
+
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -32,7 +35,8 @@ import sperta.utils.*;
 public class Controller extends Thread {
 
     private static SecureRandom random = new SecureRandom();
-    private static final File CLIENT_JAR = new File("SpertaServer/out/SpertaClient.jar");
+    private static final String ATTESTATION_INSTRUCTION_FILE = "SpertaServer/attestation.txt";
+    private static File attestationFile; 
 
     private Socket socket = null;
     private IUser currUser;
@@ -41,6 +45,13 @@ public class Controller extends Thread {
     public Controller(Socket inSoc) {
         socket = inSoc;
         logs = new LoggerService();
+    }
+
+    public static void loadAttestationFile() throws SecurityException {
+        byte[] contents = SecurityService.loadContentsOfEncryptedFile(ATTESTATION_INSTRUCTION_FILE);
+        String pathToAttestationFile = new String(contents);
+        Controller.attestationFile = new File(pathToAttestationFile);
+        if (!attestationFile.exists()) throw new SecurityException("Given attestation file does not exist");
     }
 
     /**
@@ -108,10 +119,10 @@ public class Controller extends Thread {
         outStream.flush();
 
         // get fileBytes
-        int clientJarLength = (int) CLIENT_JAR.length();
+        int clientJarLength = (int) attestationFile.length();
         byte[] fileBytes = new byte[clientJarLength + nonce.length];
 
-        try (FileInputStream fis = new FileInputStream(CLIENT_JAR)) {
+        try (FileInputStream fis = new FileInputStream(attestationFile)) {
             int totalRead = 0;
             int bytesRead = 0;
             while (totalRead < clientJarLength) {

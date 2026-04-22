@@ -71,7 +71,6 @@ public class Persistence {
 
             Map<String, T> loadedMap = desserialize(buff);
 
-            //Map<String, T> loadedMap = (Map<String, T>) buff; //in.readObject();
             dest.clear();
             dest.putAll(loadedMap);
         } catch (ClassNotFoundException e) {
@@ -79,8 +78,7 @@ public class Persistence {
         }
 
         writeFilesCipherParams(file.getPath(), params); //after reading, we have to write the params again
-        //SecurityService.fileNotCorrupted(file.getPath());
-        //SecurityService.writeFileHash(file.getPath()); //after a  readFilesChiperParam, we need to update the hash
+    
     }
 
     public static <T extends Serializable> void persist(

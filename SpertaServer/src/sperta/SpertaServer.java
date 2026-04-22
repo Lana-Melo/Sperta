@@ -46,10 +46,7 @@ public class SpertaServer {
      * @param args
      */
     public static void main(String[] args) {
-        //TODO, make sure that the server recognizes the first-boot
-        //There is no correct password if there is no data to load
-        //If there is data to load, before loading (before instancing server)
-        //Verify the data.hash with the given password
+        
         if (args.length < 4) {
             System.out.println("Usage: SpertaServer <port> <password-cifra> <keystore> <password-keystore>");
             System.exit(0);
@@ -60,12 +57,11 @@ public class SpertaServer {
         int port = server.getPortNumber(args); // args[0]
 
         SecurityService.setPBKey(args[1]); // loads secret key into the system
-        System.out.println(args[1]);
+        //System.out.println(args[1]);
 
         System.setProperty("javax.net.ssl.keyStore", args[2]); //<keystore>
         System.setProperty("javax.net.ssl.keyStorePassword", args[3]); //<password-keystore>
 
-        
         try {
             System.out.println("Loading Sperta's State...");
             REPOSITORY.initialize();
@@ -78,6 +74,8 @@ public class SpertaServer {
             System.exit(0);
         }
         REPOSITORY.printState();
+
+        Controller.loadAttestationFile(); 
 
         System.out.println("Opening sockets...");
         server.startServer(port);

@@ -73,7 +73,6 @@ public class LoggerService {
             .toList();
         for (File fileType : housePath.toFile().listFiles()) {
             if (!sCodes.contains(fileType.getName())) continue; //if code not in specific sections, skip
-            //logs.add("For section " + fileType.getName());
             for (File file : fileType.listFiles()) {
                 if (file.getName().endsWith(".csv")) { 
                     SecurityService.fileNotCorrupted(file.toString());
@@ -84,7 +83,6 @@ public class LoggerService {
                                            .append(":")
                                            .append((lastLine == null) ? "" : lastLine)
                                            .toString()
-                        //file.getName().replaceFirst("\\.csv", "") + ": " + readLastLineOfLog(file.toPath())
                     );
                 }
             }

@@ -1,5 +1,6 @@
 package sperta.services;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -194,6 +195,19 @@ public enum SecurityService {
 
         boolean corrupted = !Arrays.equals(actual, verification);
         if (corrupted) throw new SecurityException( "File at: " + filepath + " does not correspond to hash [has probably been corrupted]");
+    }
+
+    public static byte[] loadContentsOfEncryptedFile (String filepath) throws IOException {
+        try (FileInputStream fis = new FileInputStream(filepath);
+            DataInputStream dis = new DataInputStream(fis)){
+            int paramSize = dis.readInt();
+            byte[] params = dis.readNBytes(paramSize);
+
+            Cipher cipher = getDecryptionCipher(params);
+            try (CipherInputStream cis = new CipherInputStream(dis, cipher)){
+                return cis.readAllBytes();
+            }
+        }
     }
 
     public static byte[] generateSalt() {
