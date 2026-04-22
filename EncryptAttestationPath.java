@@ -34,7 +34,7 @@ public class EncryptAttestationPath {
     public static void main(String[] args) {
         if (args.length != 2) {
             throw new IllegalArgumentException(
-                "Usage: java EncryptAttestationPath <path-to-file> <password>"
+                "Usage: java EncryptAttestationPath <path-to-file-you-want-to-encrypt> <pbe-password>"
             );
         }
 
