@@ -97,8 +97,6 @@ public class Section implements ISection {
 
     public void addMantainer(IUser user) {
         this.mantainers.put(user.getUserId(), user);
-        //this.mantainers.forEach((k,v) -> {System.out.println(v);});
-        //System.out.println();
     }
 
     public void removeMantainer(IUser user) {
