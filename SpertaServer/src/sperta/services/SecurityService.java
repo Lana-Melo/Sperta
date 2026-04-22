@@ -162,11 +162,7 @@ public enum SecurityService {
         }
 
         boolean corrupted = !Arrays.equals(stored, given);
-        if (corrupted) throw new SecurityException(
-            "File at: " +
-                filepath +
-                " does not correspond to stored hash [has probably been corrupted]"
-        );
+        if (corrupted) throw new SecurityException( "File at: " + filepath + " does not correspond to stored hash [has probably been corrupted]");
     }
 
     /**
@@ -197,11 +193,7 @@ public enum SecurityService {
         }
 
         boolean corrupted = !Arrays.equals(actual, verification);
-        if (corrupted) throw new SecurityException(
-            "File at: " +
-                filepath +
-                " does not correspond to hash [has probably been corrupted]"
-        );
+        if (corrupted) throw new SecurityException( "File at: " + filepath + " does not correspond to hash [has probably been corrupted]");
     }
 
     public static byte[] generateSalt() {
@@ -212,53 +204,28 @@ public enum SecurityService {
 
     public static byte[] generateHashedPass(byte[] salt, String passwd) {
         byte[] buf = new byte[salt.length + passwd.getBytes().length];
-        System.arraycopy(
-            passwd.getBytes(),
-            0,
-            buf,
-            0,
-            passwd.getBytes().length
-        );
+        System.arraycopy( passwd.getBytes(), 0, buf, 0, passwd.getBytes().length);
         System.arraycopy(salt, 0, buf, passwd.getBytes().length, salt.length);
         MessageDigest md = newSha256Digest();
         return md.digest(buf);
     }
 
     public static SecretKey setPBKey(String password) {
-        byte[] salt = {
-            (byte) 0x12,
-            (byte) 0x3f,
-            (byte) 0xa1,
-            (byte) 0x33,
-            (byte) 0x81,
-            (byte) 0x3f,
-            (byte) 0xff,
-            (byte) 0x11,
-        };
+        byte[] salt = { (byte) 0x12, (byte) 0x3f, (byte) 0xa1, (byte) 0x33, (byte) 0x81, (byte) 0x3f, (byte) 0xff, (byte) 0x11, };
         PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), salt, 20); // pass, salt, iterations
         SecretKeyFactory kf = newPBEWithHmacSHA256AndAES128Factory();
         SecurityService.key = generatePBESecretKey(kf, keySpec); //Sets SecurityService's key
         return key;
     }
 
-    //public static CipherInputStream getCipherInputStream(InputStream is) {
-    //    return new CipherInputStream(is, getCipher(false));
-    //}
-
-    //public static CipherOutputStream getCipherOutputStream(OutputStream os) {
-    //    return new CipherOutputStream(os, getCipher(true));
-    //}
-
     public static Cipher getDecryptionCipher(byte[] params) {
         AlgorithmParameters p =
             getAlgorithmParametersPBEWithHmacSHA256AndAES128();
-        try {
+        try { 
             p.init(params);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new AssertionError(
-                "Couldn't initialize decription cypher params"
-            );
+            throw new AssertionError( "Couldn't initialize decription cypher params");
         }
         Cipher d = getChipherPBEWithHmacSHA256AndAES128Instance();
         try {
@@ -295,10 +262,7 @@ public enum SecurityService {
         }
     }
 
-    private static SecretKey generatePBESecretKey(
-        SecretKeyFactory kf,
-        PBEKeySpec keySpec
-    ) {
+    private static SecretKey generatePBESecretKey( SecretKeyFactory kf, PBEKeySpec keySpec) {
         try {
             return kf.generateSecret(keySpec);
         } catch (InvalidKeySpecException e) {
@@ -311,10 +275,7 @@ public enum SecurityService {
             return SecretKeyFactory.getInstance("PBEWithHmacSHA256AndAES_128");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            throw new AssertionError(
-                "Missing required algorithm: " + HASH_ALGORITHM,
-                e
-            );
+            throw new AssertionError( "Missing required algorithm: " + HASH_ALGORITHM, e);
         }
     }
 
@@ -324,34 +285,23 @@ public enum SecurityService {
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             // SHA-256 is required by every Java implementation, this is not supposed to be thrown
-            throw new AssertionError(
-                "Missing required algorithm: " + HASH_ALGORITHM,
-                e
-            );
+            throw new AssertionError( "Missing required algorithm: " + HASH_ALGORITHM, e);
         }
     }
 
     public static AlgorithmParameters getAlgorithmParametersPBEWithHmacSHA256AndAES128() {
         try {
-            return AlgorithmParameters.getInstance(
-                "PBEWithHmacSHA256AndAES_128"
-            );
+            return AlgorithmParameters.getInstance( "PBEWithHmacSHA256AndAES_128");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            throw new AssertionError(
-                "Coudln't get already existing encription/decription parameters"
-            );
+            throw new AssertionError( "Coudln't get already existing encription/decription parameters");
         }
     }
 
     private static File getHashFile(String filepath) throws SecurityException {
         File hashFile = new File(filepath + ".hash");
-        if (!hashFile.exists()) throw new SecurityException(
-            "No hash found for this file"
-        );
-        if (hashFile.length() != 32) throw new SecurityException(
-            "The correspondent hash of the file has been corrupted"
-        ); //32 bytes is the SHA-256's output
+        if (!hashFile.exists()) throw new SecurityException( "No hash found for this file");
+        if (hashFile.length() != 32) throw new SecurityException( "The correspondent hash of the file has been corrupted"); //32 bytes is the SHA-256's output
         return hashFile;
     }
 }
