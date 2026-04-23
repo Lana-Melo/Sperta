@@ -23,15 +23,12 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 import sperta.utils.SectionType;
@@ -399,6 +396,11 @@ public class SpertaClient {
             SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
             sectionKeys.put(section, sectionKey);
         }
+
+        System.out.println("\nA imprimir as keys das sections:");
+        for(String section: sectionKeys.keySet()){
+            System.out.println("key da section: " + section + ". key = " + sectionKeys.get(section));
+        }
         generateFile(in, "RT_" + parts[1] + ".txt", sectionKeys);
     }
     /**
@@ -420,20 +422,24 @@ public class SpertaClient {
 
             try {
                 String section = line.split("type=")[1].split(",")[0];
+                System.out.println("\nProcessando linha da seção " + section);
                 String stateEnc = line.split("state=")[1].split("}")[0];
+                System.out.println("estado encriptado: " + stateEnc);
 
                 byte[] encrypted = Base64.getDecoder().decode(stateEnc);
 
-                SecretKey key = sectionKeys.get(section);
-
+                SecretKey key = sectionKeys.get(SectionType.valueOf(section).getLabel());
+                System.out.println("key que vou usar pra desencriptar: " + key);
                 byte[] decryptedBytes = decrypt(key, encrypted);
 
                 String state = new String(decryptedBytes, StandardCharsets.UTF_8);
+                System.out.println("estado desencriptado: " + state);
 
                 line = line.replace(stateEnc, state);
 
             } catch (Exception e) {
                 System.out.println("Erro a processar linha: " + line);
+                System.err.println(e.getMessage());
             }
 
             result.append(line).append("\n");
@@ -555,7 +561,6 @@ public class SpertaClient {
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.DECRYPT_MODE, sectionKey);
         return cipher.doFinal(encryptedBytes);
-        
     }
         
     private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {        
