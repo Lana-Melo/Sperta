@@ -75,17 +75,18 @@ public class Controller extends Thread {
                 e.printStackTrace();
             }
 
-            //socket.close(); // -> done in finally
+            // socket.close(); // -> done in finally
 
-        } catch (EOFException e){
+        } catch (EOFException e) {
             System.out.println("Client Disconnected, closing socket...");
         } catch (SecurityException e) {
             throw e;
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
-        } finally { //allways close the socket even after an error
+        } finally { // allways close the socket even after an error
             try {
-                if (!socket.isClosed()) socket.close();
+                if (!socket.isClosed())
+                    socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -112,12 +113,10 @@ public class Controller extends Thread {
         outStream.write(nonce);
         outStream.flush();
 
-        //ler o jar a partir do atestation.txt assumindo q se mantei no data
+        // ler o jar a partir do atestation.txt assumindo q se mantei no data
 
-
-        //provavelvelmente fazer aquilo dos splits e lala
-        //ficar com o path + nome do ficheiro
-
+        // provavelvelmente fazer aquilo dos splits e lala
+        // ficar com o path + nome do ficheiro
 
         // get fileBytes
         int clientJarLength = (int) CLIENT_JAR.length();
@@ -198,11 +197,12 @@ public class Controller extends Thread {
                 // agora a parte do certificado
                 // o server espera q o client lhe pass o cer
                 // e depois guarda com aquela func postUserCertificate
-                //File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" + user + ".cer");
+                // File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" +
+                // user + ".cer");
 
-                //System.out.println("Saved at: " + certFile.getAbsolutePath());
-                //Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
-                byte [] readedCertBytes = (byte []) inStream.readObject();
+                // System.out.println("Saved at: " + certFile.getAbsolutePath());
+                // Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
+                byte[] readedCertBytes = (byte[]) inStream.readObject();
                 Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 return;
             }
@@ -226,7 +226,7 @@ public class Controller extends Thread {
      * 
      * @param outStream
      * @param inStream
-     * @throws Exception 
+     * @throws Exception
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
             throws Exception {
@@ -258,7 +258,7 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws Exception 
+     * @throws Exception
      */
     private void rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
             throws Exception {
@@ -311,7 +311,7 @@ public class Controller extends Thread {
             return;
         }
         outStream.writeObject(MessageCodes.OK);
-        byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
+        byte[] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
         outStream.writeObject(sectionKey);
         outStream.writeObject((long) data.length);
         outStream.write(data);
@@ -333,7 +333,7 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws Exception 
+     * @throws Exception
      */
     private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
             throws Exception {
@@ -353,20 +353,31 @@ public class Controller extends Thread {
             return;
         }
 
+        System.out.println("TENHO PERMISSAO na casa MUAHAHAHA");
+
         List<String> logContent;
-        List<SectionType> userSections = null;
+        List<SectionType> finalSections = null;
         if (repoHm.getOwner().equals(currUser)) {
             logContent = new LoggerService().getLastOperationsOfHouse(repoHm);
             System.out.println("SOU O OWNER");
-            userSections = Arrays.stream(SectionType.values())
-                            .filter(st -> st != SectionType.ALL)
-                            .toList();
+            finalSections = Arrays.stream(SectionType.values())
+                    .filter(st -> st != SectionType.ALL)
+                    .toList();
         } else {
 
-            userSections = SecurityService.getUserAccessibleSectionTypes(repoHm, currUser);
-            logContent = new LoggerService().getLastOperationsOfHouseBySection(repoHm, userSections);
-        }
+           //Sou mainteiner
+            List<SectionType> userSections = SecurityService.getUserAccessibleSectionTypes(repoHm, currUser);
 
+            finalSections =
+                    userSections.contains(SectionType.ALL)
+                    ? Arrays.stream(SectionType.values())
+                            .filter(st -> st != SectionType.ALL) //tenho permissao all
+                            .toList()
+                    : userSections; //tenho so algumas secçoes
+
+            logContent = new LoggerService().getLastOperationsOfHouseBySection(repoHm, finalSections);
+        
+        }
         byte[] data = String.join("\n", logContent).getBytes();
         if (data.length == 0) {
             System.out.println("data length é zero que pena");
@@ -375,11 +386,16 @@ public class Controller extends Thread {
             return;
         }
         outStream.writeObject(MessageCodes.OK);
-        outStream.writeInt(userSections.size());
-        for (SectionType st : userSections) {
-            if (st == SectionType.ALL) continue;
-            byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, st.getLabel());
+        System.out.println("mandei o ok e agora vai dar merda");
+        outStream.writeInt(finalSections.size());
+
+        for (SectionType st : finalSections) {
+            if (st == SectionType.ALL)
+                continue;
+            byte[] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, st.getLabel());
+            System.out.println("depois do repo");
             outStream.writeObject(st.getLabel());
+            System.out.println("mandei a label");
             outStream.writeObject(sectionKey);
         }
 
@@ -403,14 +419,14 @@ public class Controller extends Thread {
      * @param outStream
      * @param inStream
      * @param ope
-     * @throws Exception 
+     * @throws Exception
      */
     private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws Exception{
+            throws Exception {
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
-        
+
         House repoHm = Repository.INSTANCE.getHouseById(hm);
         if (repoHm == null) {
             outStream.writeObject(MessageCodes.NOHM);
@@ -433,7 +449,6 @@ public class Controller extends Thread {
             return;
         }
 
-
         LogEntry log = new LogEntry(LocalDateTime.now(), currUser, ope, repoHm);
         log.setDevice(device);
         log.setSectionType(SectionType.ALL.getEnum(sectionLabel));
@@ -445,10 +460,10 @@ public class Controller extends Thread {
 
         outStream.writeObject(MessageCodes.OK);
 
-        byte [] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
+        byte[] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, sectionLabel);
         outStream.writeObject(sectionKey);
 
-        byte [] encryptedDeviceValue = (byte []) inStream.readObject();
+        byte[] encryptedDeviceValue = (byte[]) inStream.readObject();
 
         log.setDevicesValue(encryptedDeviceValue);
         device.setState(encryptedDeviceValue);
@@ -458,7 +473,7 @@ public class Controller extends Thread {
             outStream.writeObject(MessageCodes.NOK_INTEGRITY);
             outStream.flush();
             throw new SecurityException(e.getMessage());
-        } 
+        }
         outStream.writeObject(MessageCodes.OK);
         outStream.flush();
     }
@@ -532,7 +547,7 @@ public class Controller extends Thread {
      * @param ope
      * @throws Exception when the server doesn't find the user certificate
      */
-    private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope){
+    private void add(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope) {
         try {
             boolean needCertificate = inStream.readBoolean();
             String user = (String) inStream.readObject();
@@ -541,26 +556,29 @@ public class Controller extends Thread {
             IUser repoUser = Repository.INSTANCE.getUserById(user);
             House repoHm = Repository.INSTANCE.getHouseById(hm);
 
-            if(!addOpParamsAreValid(repoUser, repoHm, s, outStream)) {return;}
-            if(needCertificate){sendUserCertificate(repoUser.getUserId(), outStream);}
+            if (!addOpParamsAreValid(repoUser, repoHm, s, outStream)) {
+                return;
+            }
+            if (needCertificate) {
+                sendUserCertificate(repoUser.getUserId(), outStream);
+            }
 
             SectionType st = SectionType.ALL.getEnum(s);
-            if(repoHm.getSection(SectionType.ALL).hasMantainer(repoUser) && !st.equals(SectionType.ALL)){
-                outStream.writeBoolean(false); //inidca ao client q ele nao precisa estar à espera da section key
-                for(SectionType section : SectionType.values()){
-                    //para todas as section remover a chave da section do user dessa section 
-                    //a nao ser q seja a section q queremos adicionar
-                    if(section.equals(st) || section.equals(SectionType.ALL)) continue;
+            if (repoHm.getSection(SectionType.ALL).hasMantainer(repoUser) && !st.equals(SectionType.ALL)) {
+                outStream.writeBoolean(false); // inidca ao client q ele nao precisa estar à espera da section key
+                for (SectionType section : SectionType.values()) {
+                    // para todas as section remover a chave da section do user dessa section
+                    // a nao ser q seja a section q queremos adicionar
+                    if (section.equals(st) || section.equals(SectionType.ALL))
+                        continue;
                     Repository.INSTANCE.removeUserKeySection(hm, section.getLabel(), user);
                 }
-            }
-            else{
-                outStream.writeBoolean(true); 
+            } else {
+                outStream.writeBoolean(true);
                 sendOwnerSK(hm, s, outStream);
                 receiveAndImporUserKeyToSection(inStream, hm, s, repoUser.getUserId());
             }
 
-        
             repoHm.addMantainerToSection(repoUser, SectionType.ALL.getEnum(s));
             outStream.writeObject(MessageCodes.OK);
             outStream.flush();
@@ -596,11 +614,13 @@ public class Controller extends Thread {
         outStream.writeObject(created ? MessageCodes.OK : MessageCodes.NOK);
         outStream.flush();
 
-        if(!created) return;
+        if (!created)
+            return;
 
         for (SectionType section : SectionType.values()) {
-            if (section == SectionType.ALL) continue;
-            //Lana aqui: substituir as linhas debaixo para receiveAndImportSectionKey
+            if (section == SectionType.ALL)
+                continue;
+            // Lana aqui: substituir as linhas debaixo para receiveAndImportSectionKey
             receiveAndImporUserKeyToSection(inStream, hm, section.getLabel(), currUser.getUserId());
         }
     }
@@ -650,30 +670,34 @@ public class Controller extends Thread {
     private void shutdown() {
         System.out.println("\nThread shutting down...");
         try {
-            if (!socket.isClosed()) socket.close();
+            if (!socket.isClosed())
+                socket.close();
         } catch (IOException e1) {
             e1.printStackTrace();
         }
     }
 
-    private void receiveAndImporUserKeyToSection(ObjectInputStream inStream, String homeId, String sectionLabel, String userId) throws IOException, ClassNotFoundException {
+    private void receiveAndImporUserKeyToSection(ObjectInputStream inStream, String homeId, String sectionLabel,
+            String userId) throws IOException, ClassNotFoundException {
         System.out.println("Recebendo a chave do mantenedor para a seção " + sectionLabel + " da casa " + homeId);
-        if(SectionType.ALL.getLabel().equals(sectionLabel)) {
-            for(SectionType st : SectionType.values()) {
-                if(st == SectionType.ALL) continue;
+        if (SectionType.ALL.getLabel().equals(sectionLabel)) {
+            for (SectionType st : SectionType.values()) {
+                if (st == SectionType.ALL)
+                    continue;
                 receiveAndImporUserKeyToSection(inStream, homeId, st.getLabel(), userId);
             }
         } else {
             byte[] wrappedKey = (byte[]) inStream.readObject();
-            Repository.INSTANCE.importUserKeyToSection(wrappedKey,homeId, sectionLabel, userId);
+            Repository.INSTANCE.importUserKeyToSection(wrappedKey, homeId, sectionLabel, userId);
         }
     }
 
     private void sendOwnerSK(String homeId, String sectionLabel, ObjectOutputStream outStream) throws Exception {
-        if(SectionType.ALL.getLabel().equals(sectionLabel)){
+        if (SectionType.ALL.getLabel().equals(sectionLabel)) {
             System.out.println("sectionLabel é all, vou enviar as chaves de todas as seções");
-            for(SectionType st : SectionType.values()) {
-                if(st == SectionType.ALL) continue;
+            for (SectionType st : SectionType.values()) {
+                if (st == SectionType.ALL)
+                    continue;
                 System.out.println("Vou enviar a chave da seção " + st.getLabel());
                 sendUserSecKey(currUser.getUserId(), homeId, st.getLabel(), outStream);
             }
@@ -682,7 +706,8 @@ public class Controller extends Thread {
         }
     }
 
-    private void sendUserSecKey(String userId, String homeId, String sectionLabel, ObjectOutputStream outStream) throws Exception {
+    private void sendUserSecKey(String userId, String homeId, String sectionLabel, ObjectOutputStream outStream)
+            throws Exception {
         byte[] keyBytes = Repository.INSTANCE.getSectionKeyByUserId(userId, homeId, sectionLabel);
         outStream.writeObject(keyBytes);
         outStream.flush();
@@ -691,29 +716,35 @@ public class Controller extends Thread {
     private void sendUserCertificate(String userId, ObjectOutputStream outStream) throws Exception {
         System.out.println("Vou enviar o cert do user: " + userId);
         byte[] certBytes = Repository.INSTANCE.getUserCerByUserId(userId);
-        if (certBytes == null) throw new Exception("User cert not found");
+        if (certBytes == null)
+            throw new Exception("User cert not found");
         outStream.writeObject(certBytes);
         outStream.flush();
     }
 
     /**
-     * Auxiliar function to ADD operation. It receives the required params for the ADD operation, verify if
-     * they are valid and return accordingly. Also, it must receive the OutputStream so it can be capable
+     * Auxiliar function to ADD operation. It receives the required params for the
+     * ADD operation, verify if
+     * they are valid and return accordingly. Also, it must receive the OutputStream
+     * so it can be capable
      * to send the right message codes to the client, if any param is invalid.
      * 
-     * @param repoUser the retrieved user from repository
-     * @param repoHm the retrieved home from repository
-     * @param s the label of the section 
-     * @param outStream the OutputStream that represents the communication channel with the client application 
-     * @return true if all params are valid, so the add operation can be executed. false otherwise.
+     * @param repoUser  the retrieved user from repository
+     * @param repoHm    the retrieved home from repository
+     * @param s         the label of the section
+     * @param outStream the OutputStream that represents the communication channel
+     *                  with the client application
+     * @return true if all params are valid, so the add operation can be executed.
+     *         false otherwise.
      */
-    private boolean addOpParamsAreValid(IUser repoUser, House repoHm, String s, ObjectOutputStream outStream) throws IOException {
+    private boolean addOpParamsAreValid(IUser repoUser, House repoHm, String s, ObjectOutputStream outStream)
+            throws IOException {
         if (repoUser == null) {
             outStream.writeObject(MessageCodes.NOUSER);
             outStream.flush();
             return false;
         }
-        
+
         if (repoHm == null) {
             outStream.writeObject(MessageCodes.NOHM);
             outStream.flush();

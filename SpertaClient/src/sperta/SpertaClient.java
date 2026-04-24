@@ -384,7 +384,12 @@ public class SpertaClient {
         out.writeObject(parts[1]); // <hm>
         out.flush();
 
+        System.out.println("Estou dentro do RT");
+
         MessageCodes serverResponse = (MessageCodes) in.readObject();
+        
+        System.out.println("ja li o q o server me mandou");
+
         System.out.print("Response: " + serverResponse);
         if (serverResponse != MessageCodes.OK){System.out.println(); return;}
 
