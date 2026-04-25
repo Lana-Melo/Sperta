@@ -11,14 +11,23 @@ import java.io.ObjectOutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
@@ -29,8 +38,10 @@ public class SpertaClient {
     private static final int DEFAULT_PORT_NUMBER = 22345;
 
     private static final File CLIENT_JAR = new File("SpertaClient/SpertaClient.jar");
-    private static final String USER_SECURITY_LIB = "./SpertaClient/security/users/";
-    private static String SECURITY_PASS = "changeit";
+    private static String KEYSTORE_PASS;
+    private static String KEYSTORE;
+    private static String TRUSTSTORE;
+    private static String TRUSTSTORE_PASS;
 
     public static void main(String[] args) {
         /*
@@ -52,12 +63,20 @@ public class SpertaClient {
             String pass = args[6];
             String host = args[0].contains(":") ? args[0].split(":")[0] : args[0];
             int port = args[0].contains(":") ? Integer.parseInt(args[0].split(":")[1]) : DEFAULT_PORT_NUMBER; 
-            String keystore = args[3];
-            String passwordKeystore = args[4];
 
+        
+            validateFileExists(args[3], "Keystore"); //pra ver se encontrou a keystore
+
+            TRUSTSTORE = args[1];       
+            TRUSTSTORE_PASS = args[2];
+
+            KEYSTORE = args[3];
+            KEYSTORE_PASS = args[4];
             
-            System.setProperty("javax.net.ssl.trustStore", args[1]);
-            System.setProperty("javax.net.ssl.trustStorePassword", args[2]);
+
+            System.setProperty("javax.net.ssl.trustStore", TRUSTSTORE);
+            System.setProperty("javax.net.ssl.trustStorePassword", TRUSTSTORE_PASS);
+            System.setProperty("javax.net.ssl.trustStoreType", "JCEKS");
 
 
             //SocketFactory sf = SSLSocketFactory.getDefault( );                -> DESCOMENTAR NO FIM, isto é so pra debug e isso
@@ -71,12 +90,10 @@ public class SpertaClient {
             // atestar
             attestation(out, in, clientSocket);
 
-            System.out.println("ANTES DE CHAMAR FUN AUTHENTICATION");
-
             // autenticar
             authentication(out, in, user, pass);
             // loop comandos
-            userInteraction(out, in, user, keystore, passwordKeystore);
+            userInteraction(out, in, user);
 
             clientSocket.close();
 
@@ -143,8 +160,7 @@ public class SpertaClient {
     private static void authentication(ObjectOutputStream out, ObjectInputStream in, String user, String pass) throws Exception {
         Scanner sc = new Scanner(System.in);
         MessageCodes server_response;
-        System.out.println("Dentro da FUN AUTHENTICATION antes de do");
-
+    
         do {
             out.writeObject(user);
             out.writeObject(pass);
@@ -158,19 +174,9 @@ public class SpertaClient {
 
         if(server_response == (MessageCodes.OK_NEW_USER)){
             System.out.println("Sou um new user e vou mandar meu cert pro server");
-            /*FileInputStream kfile = new FileInputStream(keystore);
-            KeyStore kstore = KeyStore.getInstance("PKCS12");
-            kstore.load(kfile, passwordKeystore.toCharArray()); //password da keystore
-            Certificate cert = kstore.getCertificate(user);*/
-
-            //ObjectOutputStream outCer = new ObjectOutputStream(out);
-            //outCer.writeObject(cert); //estou a enviar o cert ao server 
-            
-            //byte [] certBytes = cert.getEncoded();
-            //out.writeObject(certBytes);
-
-            File certFile = new File("SpertaClient/security/users/" + user + "/" + user + ".cer");
-            sendFile(certFile, out);
+            byte[] certBytes = loadKeyStore().getCertificate(user).getEncoded();
+            out.writeObject(certBytes);
+            out.flush();
             System.out.println("ja mandei meu cert pro server");
             
         }
@@ -199,7 +205,7 @@ public class SpertaClient {
      * @param in
      * @throws Exception
      */
-    private static void userInteraction(ObjectOutputStream out, ObjectInputStream in, String user, String keystore, String passwordKeystore) throws Exception {
+    private static void userInteraction(ObjectOutputStream out, ObjectInputStream in, String user) throws Exception {
         Scanner sc = new Scanner(System.in);
         commands();
         System.out.print("Command:");
@@ -212,9 +218,9 @@ public class SpertaClient {
                     case "CREATE" -> createHouse(parts, out, in, user);
                     case "ADD"    -> addUser(parts, out, in, user);
                     case "RD"     -> registerDevice(parts, out, in);
-                    case "EC"     -> sendCommand(parts, out, in);
-                    case "RT"     -> receiveLastState(parts, out, in);
-                    case "RH"     -> receiveHistory(parts, out, in);
+                    case "EC"     -> sendCommand(parts, out, in, user);
+                    case "RT"     -> receiveLastState(parts, out, in, user);
+                    case "RH"     -> receiveHistory(parts, out, in, user);
                     case "help"   -> commands();
                     default       -> System.out.println("Invalid command. Type 'help'.");
                 }
@@ -274,8 +280,10 @@ public class SpertaClient {
             System.out.println("IDENTIFICOU QUE PRECISA DO CERTIFICADO");
             receiveAndImportUserCert(in, maintainerId, user); 
         }
+        boolean  waitForKey = in.readBoolean();
+        if(waitForKey) receiveSKAndSendMantainerSK(in, out, maintainerId, user, homeId, sectionLabel);
+        
 
-        receiveSKAndSendMantainerSK(in, out, maintainerId, user, homeId, sectionLabel);
         System.out.println("Response: " + in.readObject());
     }
 
@@ -322,16 +330,42 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void sendCommand(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void sendCommand(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 4, "EC <hm> <d> <int>")) return;
+        int deviceValue;
+        try {
+            deviceValue = Integer.parseInt(parts[3]);
+        }catch (NumberFormatException e) {
+            System.out.println(MessageCodes.NOK);
+            return;
+        }
+        if (deviceValue < 0 || deviceValue > 600) {
+            System.out.println(MessageCodes.NOK);
+            return;
+        }
+
         //mandar enum operation EC
         out.writeObject(Operation.EC);
         out.writeObject(parts[1]);  // <hm>
         out.writeObject(parts[2]);  // <d>
-        out.writeObject(parts[3]); // <int>
+        out.flush();
+
+        MessageCodes response = (MessageCodes) in.readObject();
+        if(response != MessageCodes.OK){
+            System.out.println("Response: " + response);
+            return;
+        }
+
+        
+        byte [] wrappedSectionKey = (byte []) in.readObject();
+        SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.ENCRYPT_MODE, sectionKey);
+        byte [] deviceValueEncrypted = cipher.doFinal(parts[3].getBytes());
+        out.writeObject(deviceValueEncrypted);
         out.flush();
         System.out.println("Response: " + in.readObject());
     }
@@ -341,31 +375,102 @@ public class SpertaClient {
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void receiveLastState(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void receiveLastState(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 2, "RT <hm>")) return;
         //mandar enum operation RT
         out.writeObject(Operation.RT);
         out.writeObject(parts[1]); // <hm>
         out.flush();
 
+        System.out.println("Estou dentro do RT");
+
         MessageCodes serverResponse = (MessageCodes) in.readObject();
+        
+        System.out.println("ja li o q o server me mandou");
+
         System.out.print("Response: " + serverResponse);
         if (serverResponse != MessageCodes.OK){System.out.println(); return;}
-        generateFile(in, "RT_" + parts[1] + ".txt");
+
+        int nKeys = in.readInt();
+        Map<String, SecretKey> sectionKeys = new HashMap<>();
+        for (int i = 0; i < nKeys; i++) {
+            String section = (String) in.readObject();
+            byte [] wrappedSectionKey = (byte []) in.readObject();
+            SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+            sectionKeys.put(section, sectionKey);
+        }
+
+        System.out.println("\nA imprimir as keys das sections:");
+        for(String section: sectionKeys.keySet()){
+            System.out.println("key da section: " + section + ". key = " + sectionKeys.get(section));
+        }
+        generateFile(in, "RT_" + parts[1] + ".txt", sectionKeys);
     }
+    /**
+     * 
+     * @param in
+     * @param filename
+     * @throws IOException 
+     * @throws ClassNotFoundException 
+     */
+    private static void generateFile(ObjectInputStream in, String filename, Map<String, SecretKey> sectionKeys) throws IOException, ClassNotFoundException {
+        long size = (long) in.readObject();
+        byte[] data = new byte[(int) size];
+        in.readFully(data);
+
+        String content = new String(data);
+        StringBuilder result = new StringBuilder();
+
+        for (String line : content.split("\n")) {
+
+            try {
+                String section = line.split("type=")[1].split(",")[0];
+                System.out.println("\nProcessando linha da seção " + section);
+                String stateEnc = line.split("state=")[1].split("}")[0];
+                System.out.println("estado encriptado: " + stateEnc);
+
+                byte[] encrypted = Base64.getDecoder().decode(stateEnc);
+
+                SecretKey key = sectionKeys.get(SectionType.valueOf(section).getLabel());
+                System.out.println("key que vou usar pra desencriptar: " + key);
+                byte[] decryptedBytes = decrypt(key, encrypted);
+
+                String state = new String(decryptedBytes, StandardCharsets.UTF_8);
+                System.out.println("estado desencriptado: " + state);
+
+                line = line.replace(stateEnc, state);
+
+            } catch (Exception e) {
+                System.out.println("Erro a processar linha: " + line);
+                System.err.println(e.getMessage());
+            }
+
+            result.append(line).append("\n");
+        }
+
+        File dir = new File("SpertaClient/data/clientFiles");
+        if (!dir.exists()) dir.mkdirs();
+
+        File f = new File(dir, filename);
+
+        try (FileOutputStream fos = new FileOutputStream(f)) {
+            fos.write(result.toString().getBytes());
+        }
+
+        System.out.println(result);
+    }
+    
 
     /**
      * Sends an RH request and saves the command history of a device.
      * @param parts
      * @param out
      * @param in
-     * @throws IOException 
-     * @throws ClassNotFoundException 
+     * @throws Exception 
      */
-    private static void receiveHistory(String [] parts, ObjectOutputStream out, ObjectInputStream in) throws IOException, ClassNotFoundException{
+    private static void receiveHistory(String [] parts, ObjectOutputStream out, ObjectInputStream in, String user) throws Exception{
         if (!validateNumArgs(parts, 3, "RH <hm> <d>")) return;
         //mandar enum operation RH
         out.writeObject(Operation.RH);
@@ -376,7 +481,10 @@ public class SpertaClient {
         MessageCodes server_response = (MessageCodes) in.readObject();
         System.out.print("Response: " + server_response);
         if (server_response != MessageCodes.OK){System.out.println(); return;}
-        generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv");
+        byte [] wrappedSectionKey = (byte []) in.readObject();
+        SecretKey sectionKey = unwrapKeyWithPrivateKey(wrappedSectionKey, user);
+
+        generateFile(in, "RH_" + parts[1] + "_" + parts[2] + ".csv", sectionKey);
     }
 
     /**
@@ -399,20 +507,66 @@ public class SpertaClient {
      * @throws IOException
      * @throws ClassNotFoundException
      */
-    private static void generateFile(ObjectInputStream in, String filename) throws IOException, ClassNotFoundException {
+    private static void generateFile(ObjectInputStream in, String filename,SecretKey sectionKey) throws IOException, ClassNotFoundException {
         long size = (long) in.readObject(); 
         System.out.print(", " + size + " (long), seguido de " + size + " bytes de dados.\n");
         byte[] data = new byte[(int) size];
         in.readFully(data);
-        File dir = new File("data/clientFiles");
+
+        String content = new String(data);
+        StringBuilder result = new StringBuilder();
+        for (String line : content.split("\n")) {
+            if (line.contains("state=")) {
+            try {
+                // extrair parte cifrada
+                int start = line.indexOf("state=") + 6;
+                int end = line.indexOf("}", start);
+                String encryptedBase64 = line.substring(start, end);
+
+                // decode base64 → bytes
+                byte[] encryptedBytes = Base64.getDecoder().decode(encryptedBase64);
+
+                // chamar tua função decrypt
+                byte[] decryptedBytes = decrypt(sectionKey,encryptedBytes);
+
+                //
+                String state = new String(decryptedBytes, StandardCharsets.UTF_8);
+
+                line = line.substring(0, start) + state + line.substring(end);
+
+            } catch (Exception e) {
+                    System.out.println("Erro ao decifrar linha: " + line);
+                }
+            }
+
+            result.append(line).append("\n");
+        }       
+        File dir = new File("SpertaClient/data/clientFiles");
         if (!dir.exists()) dir.mkdirs();
         File f = new File(dir, filename);
-        FileOutputStream f_out = new FileOutputStream(f);
-        f_out.write(data);
-        f_out.close(); 
-        System.out.println(new String(data));
+
+        try (FileOutputStream f_out = new FileOutputStream(f)) {
+            f_out.write(result.toString().getBytes());
+        }
+        System.out.println(result.toString());
     }
 
+    /**
+     * 
+     * @param sectionKey
+     * @param encryptedBytes
+     * @return
+     * @throws BadPaddingException 
+     * @throws IllegalBlockSizeException 
+     * @throws InvalidKeyException 
+     * @throws NoSuchPaddingException 
+     * @throws NoSuchAlgorithmException 
+     */
+    private static byte [] decrypt(SecretKey sectionKey, byte [] encryptedBytes) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.DECRYPT_MODE, sectionKey);
+        return cipher.doFinal(encryptedBytes);
+    }
         
     private static boolean sendFile(File f, ObjectOutputStream outStream) throws IOException {        
         try (FileInputStream fis = new FileInputStream(f)) {
@@ -451,17 +605,28 @@ public class SpertaClient {
     }
     
     private static byte[] getUserCert(String maintainerId, String user) {
-        try (FileInputStream tstoreFile = new FileInputStream(USER_SECURITY_LIB + "/" + user + "/truststore." + user)) {
+        /*try (FileInputStream tstoreFile = new FileInputStream(USER_SECURITY_LIB + "/" + user + "/truststore." + user)) {
             KeyStore tstore = KeyStore.getInstance("JCEKS");
-            tstore.load(tstoreFile, SECURITY_PASS.toCharArray());
+            tstore.load(tstoreFile, KEYSTORE_PASS.toCharArray());
             Certificate cert = tstore.getCertificate(maintainerId);
             //System.out.println("cert: " + cert); // null se não encontrou
-            return tstore.getCertificate(maintainerId).getEncoded();
+            return tstore.getCertificate(maintainerId).getEncoded();*/
+        try{
+            Certificate cert = loadTrustStore().getCertificate(maintainerId);
+            return cert.getEncoded();
         } catch (Exception e) {
             return null;
         }
     }
 
+    /**
+     * 
+     * @param mantainer
+     * @param owner
+     * @param ownerWrappedSK
+     * @return
+     * @throws Exception
+     */
     private static byte[] generateMantainerSKFromOwnerSK(String mantainer, String owner, byte[] ownerWrappedSK) throws Exception {
         System.out.println("Gerando a chave do mantenedor a partir da chave do owner");
         byte[] mantainerCerBytes = getUserCert(mantainer, owner);
@@ -469,17 +634,28 @@ public class SpertaClient {
         return wrapKeyWithPublicKey(SectionKey, mantainerCerBytes);
     }
 
+    /**
+     * 
+     * @param wrappedKey
+     * @param owner
+     * @return
+     * @throws Exception
+     */
     private static SecretKey unwrapKeyWithPrivateKey(byte[] wrappedKey, String owner) throws Exception {
-        KeyStore kstore = KeyStore.getInstance("JCEKS");
-        try (FileInputStream kfile = new FileInputStream(USER_SECURITY_LIB + "/" + owner + "/keystore." + owner)) {
-            kstore.load(kfile, SECURITY_PASS.toCharArray());
-        }
-        PrivateKey privateKey = (PrivateKey) kstore.getKey(owner, SECURITY_PASS.toCharArray());
+        KeyStore kstore = loadKeyStore();
+        PrivateKey privateKey = (PrivateKey) kstore.getKey(owner, KEYSTORE_PASS.toCharArray());
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.UNWRAP_MODE, privateKey);
         return (SecretKey) cipher.unwrap(wrappedKey, "AES", Cipher.SECRET_KEY);
     }
 
+    /**
+     * 
+     * @param key
+     * @param cerBytes
+     * @return
+     * @throws Exception
+     */
     private static byte[] wrapKeyWithPublicKey(SecretKey key, byte[] cerBytes) throws Exception {
         Certificate cert = CertificateFactory.getInstance("X.509")
                 .generateCertificate(new ByteArrayInputStream(cerBytes));
@@ -488,6 +664,12 @@ public class SpertaClient {
         return cipher.wrap(key);
     }
 
+    /**
+     * 
+     * @param ownerId
+     * @param out
+     * @throws Exception
+     */
     private static void createAndSendSectionKeys(String ownerId, ObjectOutputStream out) throws Exception {
         for(SectionType section : SectionType.values()){
             if (section == SectionType.ALL) continue;
@@ -497,39 +679,85 @@ public class SpertaClient {
         }
     }
 
+    /**
+     * 
+     * @param user
+     * @return
+     * @throws Exception
+     */
     private static byte[] generateAndWrapKey(String user) throws Exception {
         KeyGenerator kg = KeyGenerator.getInstance("AES");
         kg.init(128);
         SecretKey sectionKey = kg.generateKey();
 
-        Certificate cert = CertificateFactory.getInstance("X509")
-                .generateCertificate(new FileInputStream(USER_SECURITY_LIB + "/" + user + "/" + user + ".cer"));
+        //Certificate cert = CertificateFactory.getInstance("X509")
+          //      .generateCertificate(new FileInputStream(USER_SECURITY_LIB + "/" + user + "/" + user + ".cer"));
         Cipher cipher = Cipher.getInstance("RSA");
-        cipher.init(Cipher.WRAP_MODE, cert.getPublicKey());
+        cipher.init(Cipher.WRAP_MODE, loadKeyStore().getCertificate(user).getPublicKey());
         return cipher.wrap(sectionKey);
     }
 
-
+    /**
+     * 
+     * @param in
+     * @param mantainerId
+     * @param user
+     * @throws Exception
+     */
     private static void receiveAndImportUserCert(ObjectInputStream in, String mantainerId, String user) throws Exception {
         byte[] certBytes = (byte[]) in.readObject();
         Certificate userCert = CertificateFactory.getInstance("X.509")
                 .generateCertificate(new ByteArrayInputStream(certBytes));
         
-        KeyStore tstore = KeyStore.getInstance("JCEKS");
-        File tstoreFile = new File(USER_SECURITY_LIB + "/" + user + "/truststore." + user);
-        
-        if (tstoreFile.exists()) {
-            try (FileInputStream tstoreIn = new FileInputStream(tstoreFile)) {
-                tstore.load(tstoreIn, SECURITY_PASS.toCharArray());
-            }
-        } else {
-            tstore.load(null, SECURITY_PASS.toCharArray()); // cria truststore vazia
-        }
-
+        KeyStore tstore = loadTrustStore();
+ 
         tstore.setCertificateEntry(mantainerId, userCert);
+        File tstoreFile = new File(TRUSTSTORE);
         try (FileOutputStream tstoreOut = new FileOutputStream(tstoreFile)) {
-            tstore.store(tstoreOut, SECURITY_PASS.toCharArray());
+            tstore.store(tstoreOut, TRUSTSTORE_PASS.toCharArray());
             System.out.println("Certificado do mantenedor " + mantainerId + " importado com sucesso para o truststore do usuário " + user);
         }
+    }
+
+    /**
+     * Validates that a file exists at the given path, exiting the program if not found
+     * @param path
+     * @param label
+     */
+    private static void validateFileExists(String path, String file) {
+        if (!new File(path).exists()) {
+            System.err.println(file + " not found: " + path);
+            System.exit(0);
+        }
+    }
+
+    /**
+     * 
+     * @return
+     * @throws Exception
+     */
+    private static KeyStore loadKeyStore() throws Exception {
+        KeyStore ks = KeyStore.getInstance("JCEKS");
+        try (FileInputStream fis = new FileInputStream(KEYSTORE)) {
+            ks.load(fis, KEYSTORE_PASS.toCharArray());
+        }
+        return ks;
+    }
+    /**
+     * 
+     * @return
+     * @throws Exception
+     */
+    private static KeyStore loadTrustStore() throws Exception {
+        KeyStore tstore = KeyStore.getInstance("JCEKS");
+        File tstoreFile = new File(TRUSTSTORE);
+        if (tstoreFile.exists()) {
+            try (FileInputStream tstoreIn = new FileInputStream(tstoreFile)) {
+                tstore.load(tstoreIn, TRUSTSTORE_PASS.toCharArray());
+            }
+        } else {
+            tstore.load(null, TRUSTSTORE_PASS.toCharArray()); // cria truststore vazia
+        }
+        return tstore;
     }
 }

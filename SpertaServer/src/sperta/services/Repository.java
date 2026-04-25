@@ -1,9 +1,11 @@
 package sperta.services;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import sperta.domain.core.House;
@@ -135,5 +137,18 @@ public enum Repository {
         File keyFile = new File(HOUSES_PATH + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId);
         if (!keyFile.exists()) throw new Exception("Section Key for user not found");
         return Files.readAllBytes(keyFile.toPath());
+    }
+
+    public void importUserKeyToSection(byte[] wrappedKey, String homeId, String sectionLabel, String userId) throws FileNotFoundException, IOException {
+        File keyFile = new File("SpertaServer/data/houses/" + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId); 
+        keyFile.getParentFile().mkdirs();
+        try (FileOutputStream fos = new FileOutputStream(keyFile)) {
+            fos.write(wrappedKey);
+        }
+    }
+
+    public void removeUserKeySection(String homeId, String sectionLabel, String userId) throws IOException{
+        Files.deleteIfExists(Path.of("SpertaServer/data/houses/" + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId));
+
     }
 }

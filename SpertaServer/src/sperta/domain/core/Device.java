@@ -1,11 +1,13 @@
 package sperta.domain.core;
 
+import java.util.Base64;
+
 import sperta.utils.SectionType;
 
 public class Device  implements java.io.Serializable {
     private Long id;
     private SectionType type;
-    private Integer state;
+    private byte [] state;
 
     /**
      * SectionType t can't be ALL
@@ -15,10 +17,10 @@ public class Device  implements java.io.Serializable {
     Device(Long id, SectionType t){
         this.id = id;
         this.type = t;
-        this.state = 0;
+        this.state = new byte []{};
     }
 
-    Device(Long id, SectionType type, Integer state){
+    Device(Long id, SectionType type, byte [] state){
         this.id = id;
         this.type = type;
         this.state = state;
@@ -46,10 +48,10 @@ public class Device  implements java.io.Serializable {
     public void setType(SectionType type) {
         this.type = type;
     }
-    public Integer getState() {
+    public byte [] getState() {
         return state;
     }
-    public void setState(Integer state) {
+    public void setState(byte [] state) {
         this.state = state;
     }
 
@@ -58,7 +60,7 @@ public class Device  implements java.io.Serializable {
         return " Device{" +
                 "id=" + id +
                 ", type=" + type +
-                ", state=" + state +
+                ", state=" + Base64.getEncoder().encodeToString(state) +
                 '}';
     }
 
