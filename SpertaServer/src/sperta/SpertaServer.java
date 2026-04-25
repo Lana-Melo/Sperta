@@ -57,10 +57,11 @@ public class SpertaServer {
         int port = server.getPortNumber(args); // args[0]
 
         SecurityService.setPBKey(args[1]); // loads secret key into the system
-        //System.out.println(args[1]);
 
         System.setProperty("javax.net.ssl.keyStore", args[2]); //<keystore>
         System.setProperty("javax.net.ssl.keyStorePassword", args[3]); //<password-keystore>
+        System.setProperty("javax.net.ssl.keyStoreType", "JCEKS");
+
 
         try {
             System.out.println("Loading Sperta's State...");
@@ -88,14 +89,12 @@ public class SpertaServer {
     private void startServer(int port) {
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
 
-		/*try{
-			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );             -> DESCOMENTAR NO FIM, isto é so pra debug e isso
-			SSLServerSocket sSoc = (SSLServerSocket) ssf.createServerSocket(port);*/
-        try (ServerSocket sSoc = new ServerSocket(port)) {   
+		try{
+			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );            
+			SSLServerSocket sSoc = (SSLServerSocket) ssf.createServerSocket(port);
             serverSocket = sSoc;    // Just so it can be referenced when shutting down
             while(!stopExecution.get()){
                 Socket clienSocket = sSoc.accept();
-                //pool.execute(new Controller(clienSocket));
                 pool.execute(() -> { 
                     try {
                         new Controller(clienSocket).run();

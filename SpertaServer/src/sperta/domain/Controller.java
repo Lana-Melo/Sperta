@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOError;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -15,9 +13,6 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-
-import javax.crypto.Cipher;
-
 import sperta.domain.core.Device;
 import sperta.domain.core.House;
 import sperta.domain.core.IUser;
@@ -50,11 +45,12 @@ public class Controller extends Thread {
     public static void loadAttestationFile() throws SecurityException, IOException {
         byte[] contents = SecurityService.loadContentsOfEncryptedFile(ATTESTATION_INSTRUCTION_FILE);
         String pathToAttestationFile = new String(contents);
+        System.out.println(pathToAttestationFile);
         Controller.attestationFile = new File(pathToAttestationFile);
-        if (!attestationFile.exists()) throw new SecurityException("Given attestation file does not exist");
+        if (!Controller.attestationFile.exists()) throw new SecurityException("Given attestation file does not exist");
     }
 
-    /**
+    /**x
      * The main execution method of the Controller thread. It sets up the input and
      * output streams, performs attestation and authentication, and processes client
      * commands in a loop. The thread can be gracefully shut down using a shutdown
@@ -74,35 +70,22 @@ public class Controller extends Thread {
                 return;
             }
 
-            System.out.println("Vou autenticar user");
             // authentication
             authenticate(outStream, inStream);
 
             // commands loop
-            //try {
-                operations(outStream, inStream);
-            //} catch (Exception e) {
-                // TODO Auto-generated catch block
-            //    e.printStackTrace();
-            //}
-
-            // socket.close(); // -> done in finally
+            operations(outStream, inStream);
 
         } catch (EOFException e) {
             System.out.println("Client Disconnected, closing socket...");
         } catch (SecurityException e) {
             throw e;
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
+            //worker thread desbloqueio do read e vai executar o seu shutdown()
+        } catch (ClassNotFoundException e){
             e.printStackTrace();
-        } finally { // allways close the socket even after an error
-            try {
-                if (!socket.isClosed())
-                    socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
-
+        shutdown();
     }
 
     /**
@@ -176,7 +159,7 @@ public class Controller extends Thread {
             throws ClassNotFoundException, IOException {
 
         String user;
-        String passwd; // ainda quero guardar a pass pra depois gerar o hash
+        String passwd;
         byte[] salt;
         MessageCodes msg;
 
@@ -186,41 +169,27 @@ public class Controller extends Thread {
             this.currUser = Repository.INSTANCE.getUserById(user);
             msg = currUser == null ? MessageCodes.OK_NEW_USER
                     : Arrays.equals(SecurityService.generateHashedPass(currUser.getSalt(), passwd), currUser.getHash())
-                            ? MessageCodes.OK_USER // ao inves de comparar pas vai fazer aquilo de recaulcular hash e
-                                                   // ver se é igual ao q esta guardado
+                            ? MessageCodes.OK_USER 
                             : MessageCodes.WRONG_PWD;
 
             if (msg == MessageCodes.OK_NEW_USER) {
-                System.out.println("Sou um new user");
                 // gerar salt
                 salt = SecurityService.generateSalt();
                 // gerar hash
                 byte[] hashedPass = SecurityService.generateHashedPass(salt, passwd);
 
-                // talvez colocar no security service esa func de gerar salt e gerar hash
-                currUser = new User(user, hashedPass, salt); // mudou agora é com o hash e o salt guardar no user o hash
-                                                             // e o salt
+                currUser = new User(user, hashedPass, salt); 
+                                        
                 Repository.INSTANCE.addUser(currUser);
-                System.out.println("WEEEEEEEEE");
                 outStream.writeObject(msg);
                 outStream.flush();
-                System.out.println("ESTA Porrinha");
-                // agora a parte do certificado
-                // o server espera q o client lhe pass o cer
-                // e depois guarda com aquela func postUserCertificate
-                // File certFile = readFile(inStream, "SpertaServer/data/user_certificates/" +
-                // user + ".cer");
 
-                // System.out.println("Saved at: " + certFile.getAbsolutePath());
-                // Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 byte[] readedCertBytes = (byte[]) inStream.readObject();
                 Repository.INSTANCE.postUserCertificate(user, readedCertBytes);
                 return;
             }
 
             if (msg == MessageCodes.WRONG_PWD) {
-                System.out.println("USER RECEBIDO: " + user);
-                System.out.println("PASS RECEBIDA: " + passwd);
                 currUser = null;
             }
 
@@ -364,13 +333,10 @@ public class Controller extends Thread {
             return;
         }
 
-        System.out.println("TENHO PERMISSAO na casa MUAHAHAHA");
-
         List<String> logContent;
         List<SectionType> finalSections = null;
         if (repoHm.getOwner().equals(currUser)) {
             logContent = new LoggerService().getLastOperationsOfHouse(repoHm);
-            System.out.println("SOU O OWNER");
             finalSections = Arrays.stream(SectionType.values())
                     .filter(st -> st != SectionType.ALL)
                     .toList();
@@ -391,22 +357,18 @@ public class Controller extends Thread {
         }
         byte[] data = String.join("\n", logContent).getBytes();
         if (data.length == 0) {
-            System.out.println("data length é zero que pena");
             outStream.writeObject(MessageCodes.NODATA);
             outStream.flush();
             return;
         }
         outStream.writeObject(MessageCodes.OK);
-        System.out.println("mandei o ok e agora vai dar merda");
         outStream.writeInt(finalSections.size());
 
         for (SectionType st : finalSections) {
             if (st == SectionType.ALL)
                 continue;
             byte[] sectionKey = Repository.INSTANCE.getSectionKeyByUserId(currUser.getUserId(), hm, st.getLabel());
-            System.out.println("depois do repo");
             outStream.writeObject(st.getLabel());
-            System.out.println("mandei a label");
             outStream.writeObject(sectionKey);
         }
 
@@ -631,48 +593,8 @@ public class Controller extends Thread {
         for (SectionType section : SectionType.values()) {
             if (section == SectionType.ALL)
                 continue;
-            // Lana aqui: substituir as linhas debaixo para receiveAndImportSectionKey
             receiveAndImporUserKeyToSection(inStream, hm, section.getLabel(), currUser.getUserId());
         }
-    }
-
-    private boolean sendFile(File f, ObjectOutputStream outStream) {
-        try (FileInputStream fis = new FileInputStream(f)) {
-            outStream.writeLong(f.length());
-            byte[] buff = new byte[8192];
-            int n;
-            while ((n = fis.read(buff)) != -1) {
-                outStream.write(buff, 0, n);
-            }
-
-            outStream.flush();
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
-    }
-
-    private File readFile(ObjectInputStream inputStream, String pathName) throws IOException {
-        System.out.println("ANTES DO READLONG");
-        long fsize = inputStream.readLong();
-        System.out.println("DEPOIS DO READLONG: " + fsize);
-        File f = new File(pathName);
-        try (FileOutputStream fos = new FileOutputStream(f)) {
-            byte[] buff = new byte[8192];
-            long remaining = fsize;
-
-            while (remaining > 0) {
-                int toRead = (int) Math.min(buff.length, remaining);
-                int read = inputStream.read(buff, 0, toRead);
-                if (read == -1)
-                    throw new EOFException("Stream ended abruptly");
-                fos.write(buff, 0, read);
-                remaining -= read;
-            }
-
-            fos.flush();
-        }
-        return f;
     }
 
     /**
@@ -690,7 +612,6 @@ public class Controller extends Thread {
 
     private void receiveAndImporUserKeyToSection(ObjectInputStream inStream, String homeId, String sectionLabel,
             String userId) throws IOException, ClassNotFoundException {
-        System.out.println("Recebendo a chave do mantenedor para a seção " + sectionLabel + " da casa " + homeId);
         if (SectionType.ALL.getLabel().equals(sectionLabel)) {
             for (SectionType st : SectionType.values()) {
                 if (st == SectionType.ALL)
@@ -705,11 +626,9 @@ public class Controller extends Thread {
 
     private void sendOwnerSK(String homeId, String sectionLabel, ObjectOutputStream outStream) throws Exception {
         if (SectionType.ALL.getLabel().equals(sectionLabel)) {
-            System.out.println("sectionLabel é all, vou enviar as chaves de todas as seções");
             for (SectionType st : SectionType.values()) {
                 if (st == SectionType.ALL)
                     continue;
-                System.out.println("Vou enviar a chave da seção " + st.getLabel());
                 sendUserSecKey(currUser.getUserId(), homeId, st.getLabel(), outStream);
             }
         } else {
@@ -724,11 +643,10 @@ public class Controller extends Thread {
         outStream.flush();
     }
 
-    private void sendUserCertificate(String userId, ObjectOutputStream outStream) throws Exception {
-        System.out.println("Vou enviar o cert do user: " + userId);
+    private void sendUserCertificate(String userId, ObjectOutputStream outStream) throws SecurityException, IOException {
         byte[] certBytes = Repository.INSTANCE.getUserCerByUserId(userId);
         if (certBytes == null)
-            throw new Exception("User cert not found");
+            throw new SecurityException("User cert not found");
         outStream.writeObject(certBytes);
         outStream.flush();
     }

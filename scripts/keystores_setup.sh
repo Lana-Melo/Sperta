@@ -23,7 +23,7 @@ keytool -exportcert -alias myServer -file $SERVER_SECURITY_LIB_PATH/certServer.c
 # ---- CLIENT ---- 
 # importar cert do servidor
 keytool -importcert -alias myServer -file $SERVER_SECURITY_LIB_PATH/certServer.cer \
-        -keystore $CLIENT_SERCURITY_LIB_PATH/truststore.client -storepass $PASS -noprompt
+        -keystore $CLIENT_SERCURITY_LIB_PATH/truststore.client -storetype JCEKS -storepass $PASS -noprompt
 
 #-------------------------------------------------------------------------------------------------------------
 # ---- USERS ----
