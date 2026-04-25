@@ -79,12 +79,12 @@ public class Controller extends Thread {
             authenticate(outStream, inStream);
 
             // commands loop
-            try {
+            //try {
                 operations(outStream, inStream);
-            } catch (Exception e) {
+            //} catch (Exception e) {
                 // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            //    e.printStackTrace();
+            //}
 
             // socket.close(); // -> done in finally
 
@@ -240,7 +240,7 @@ public class Controller extends Thread {
      * @throws Exception
      */
     private void operations(ObjectOutputStream outStream, ObjectInputStream inStream)
-            throws Exception {
+            throws ClassNotFoundException, IOException, SecurityException {
 
         Operation ope;
         while (true) {
@@ -272,7 +272,7 @@ public class Controller extends Thread {
      * @throws Exception
      */
     private void rh(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws Exception {
+            throws ClassNotFoundException, IOException, SecurityException {
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();
@@ -347,7 +347,7 @@ public class Controller extends Thread {
      * @throws Exception
      */
     private void rt(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws Exception {
+            throws ClassNotFoundException, IOException, SecurityException {
         String hm = (String) inStream.readObject();
 
         House repoHm = Repository.INSTANCE.getHouseById(hm);
@@ -433,7 +433,7 @@ public class Controller extends Thread {
      * @throws Exception
      */
     private void ec(ObjectOutputStream outStream, ObjectInputStream inStream, Operation ope)
-            throws Exception {
+            throws ClassNotFoundException, IOException, SecurityException {
 
         String hm = (String) inStream.readObject();
         String d = (String) inStream.readObject();

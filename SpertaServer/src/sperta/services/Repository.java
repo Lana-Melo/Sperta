@@ -133,9 +133,10 @@ public enum Repository {
         }
     }
     
-    public byte[] getSectionKeyByUserId(String userId, String homeId, String sectionLabel) throws Exception {
+    // If there is no keyFile it's because the user has access, but the server's data was corrupted? Someone removed the file?
+    public byte[] getSectionKeyByUserId(String userId, String homeId, String sectionLabel) throws SecurityException, IOException {
         File keyFile = new File(HOUSES_PATH + homeId + "/" + sectionLabel + "/key." + homeId + "." + sectionLabel + "." + userId);
-        if (!keyFile.exists()) throw new Exception("Section Key for user not found");
+        if (!keyFile.exists()) throw new SecurityException("Section Key for user not found");
         return Files.readAllBytes(keyFile.toPath());
     }
 
