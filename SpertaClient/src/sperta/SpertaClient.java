@@ -1,7 +1,6 @@
 package sperta;
 
 import java.io.ByteArrayInputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -32,7 +31,6 @@ import javax.crypto.SecretKey;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-
 import sperta.utils.MessageCodes;
 import sperta.utils.Operation;
 import sperta.utils.SectionType;
@@ -277,6 +275,12 @@ public class SpertaClient {
         out.writeObject(sectionLabel);  // <s>
         out.flush();
 
+        MessageCodes response = (MessageCodes) in.readObject();
+        if(response != MessageCodes.OK){
+            System.out.println("Response: " + response);
+            return;
+        }
+        
         if(needCertificate){
             receiveAndImportUserCert(in, maintainerId, user); 
         }

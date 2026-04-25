@@ -45,7 +45,6 @@ public class Controller extends Thread {
     public static void loadAttestationFile() throws SecurityException, IOException {
         byte[] contents = SecurityService.loadContentsOfEncryptedFile(ATTESTATION_INSTRUCTION_FILE);
         String pathToAttestationFile = new String(contents);
-        System.out.println(pathToAttestationFile);
         Controller.attestationFile = new File(pathToAttestationFile);
         if (!Controller.attestationFile.exists()) throw new SecurityException("Given attestation file does not exist");
     }
@@ -532,6 +531,9 @@ public class Controller extends Thread {
             if (!addOpParamsAreValid(repoUser, repoHm, s, outStream)) {
                 return;
             }
+            // para o cliente saber que os params estão corretos e que deve esperar o cert
+            outStream.writeObject(MessageCodes.OK); 
+
             if (needCertificate) {
                 sendUserCertificate(repoUser.getUserId(), outStream);
             }
