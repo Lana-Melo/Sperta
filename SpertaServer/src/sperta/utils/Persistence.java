@@ -44,6 +44,7 @@ public class Persistence {
         Map<String, T> dest
     ) throws IOException, SecurityException {
         File file = new File(filename);
+        file.getParentFile().mkdirs();
         boolean fileCreated = file.createNewFile();
         if (!fileCreated) {
             // file already exists
