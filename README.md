@@ -33,10 +33,19 @@ This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version 
 ### File Structure
 
 ```plaintext
-|data/       --> contains the data that is persisted (by both client and server)
-|out/        --> contains the binaries
-|src/sperta/ --> contains the code
-|.           --> contains scripts and the output jars
+|clean_build.sh         --> Cleans previous data and rebuilds the project from scratch
+|server_run.sh          --> Starts the server (use this after first build)
+|client_sofia_run.sh    --> Starts client for user 'sofia'
+|client_lana_run.sh     --> Starts client for user 'lana'
+|client_gui_run.sh      --> Starts client for user 'gui'
+|scripts/               --> Contains build and security scripts
+|SpertaClient/          --> Client source code and resources
+|      |data/           --> Client data (security, users)
+|      |src/            --> Client source code
+|SpertaServer/          --> Server source code and resources
+|      |data/           --> Server data (houses, user certificates)
+|      |security/       --> Server security (keystore, attestation)
+|      |src/            --> Server source code
 ```
 
 #### The Code
@@ -61,20 +70,33 @@ This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version 
 #### The Data
 
 ```plaintext
-|clientFiles/           --> Holds all client files 
-|houses/                --> Holds all Houses's log files
-|      |Casa_1/         --> Holds all device's logs from Casa_1
-|      |      |E/       --> Holds all device's logs from Casa_1 from Section E
-|      |      | |E1.csv --> Stores the logs from E1 belonging to section E, from House Casa_1
-|      |      |G/
-|      |      |L/
-|      |      |M/
-|      |      |...
-|      |Casa_2/
-|      |      |...
-|attestation.txt        --> After compilation, receives size (in bytes) of SpertaClient's jar size
-|homes.txt              --> Contains the natively serialized in-memmory representation of all registered houses
-|users.txt              --> Contains the natively serialized in-memmory representation of all registered users
+Client/
+|data/                  --> Holds all client files (RH and RT files)
+|security/
+|   |users/
+|       |user1/         --> Holds user's keystore and trustore
+|   |trustsotre.client 
+
+Server/
+|data/
+|    |houses/                --> Holds all Houses's log files
+|           |Casa_1/         --> Holds all device's logs from Casa_1
+|           |      |E/       --> Holds all device's logs from Casa_1 from Section E and the mantainer's keys
+|           |      ||E1.csv  --> Stores the logs from E1 belonging to section E, from House Casa_1
+|    |      |      |G/
+|    |      |      |L/
+|    |      |      |M/
+|    |      |      |...
+|    |      |Casa_2/
+|    |      |      |...
+|    |homes.txt              --> Contains the natively serialized in-memmory representation of all registered houses
+|    |users.txt              --> Contains the natively serialized in-memmory representation of all registered users
+|   |user_certificates       --> Holds the certificates of new users
+|security/
+|    |attestation.txt        --> After compilation, receives the path of SpertaClient's jar copy
+|    |certServer.cer 
+|    |keystore.server
+   
 ```
 
 ##### How is Data stored?
@@ -88,31 +110,41 @@ Logs are managed by LoggerService that is called by a Controller thread that has
 
 ## Usage
 
-### Building the Project and Starting the Server
+### Building the Project
 
-To build the project, navigate to the `Sperta` directory and run:
+To build the project from scratch (compiles source code and cleans previous data), run:
 ```
-bash build.sh
+bash clean_build.sh
 ```
-It will compile the source code, generating the JAR files for both the server and client. **Also it will also clean the previous data from previous runs** and create a new `data` directory. Finally, it will run the server in the same terminal.
+This will compile the source code, generate the JAR files for both the server and client, clean the previous data from previous runs, and create a new `data` directory.
 
-**Important:** This command is to be used for the first time to build the project and start the server. For subsequent runs, you can start the server without rebuilding by using the `server_run.sh` script.
+**Important:** Use `clean_build.sh` only when you make changes to the source files and need to rebuild the project. If no changes were made to the source code, you can skip this step and directly start the server.
+
+### Starting the Server
+
+To start the server (after the first build or if no source changes were made), run:
+```
+bash server_run.sh
+```
+This will launch the server application, allowing clients to connect and interact with the system.
 
 ### Starting the Client
 
-To start the client, navigate to the `Sperta` directory and run:
-```
-bash client_run.sh
-```
-This will launch the client application, allowing you to interact with the server through the command-line interface.
+Before running the client, you may need to update the client script with the server's IP address. Open the desired client script and modify the IP address if the server is running on a different machine.
 
-This scripts launches the default user 'sofia' with password 1234, have that in mind when running multiple clients.
+To start the client, run one of the following scripts:
+```
+bash client_sofia_run.sh   # Launches client for user 'sofia'
+bash client_lana_run.sh    # Launches client for user 'lana'
+bash client_gui_run.sh     # Launches client for user 'gui'
+```
 
-If you want to run the app with a different user run:
+Alternatively, you can run the client directly with:
 ```
-java -jar SpertaClient.jar localhost <username> <password>
+java -jar SpertaClient.jar <server_ip> <username> <password>
 ```
-If you don't pass neither every argument nor the correct user's password, the server wont establish a connection.
+
+**Note:** The default password for all test users is `1234`. Make sure the server is running before starting the client.
 
 ## Limitations and Future Work
 

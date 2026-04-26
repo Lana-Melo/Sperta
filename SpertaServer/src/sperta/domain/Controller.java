@@ -106,11 +106,6 @@ public class Controller extends Thread {
         outStream.write(nonce);
         outStream.flush();
 
-        // ler o jar a partir do atestation.txt assumindo q se mantei no data
-
-        // provavelvelmente fazer aquilo dos splits e lala
-        // ficar com o path + nome do ficheiro
-
         // get fileBytes
         int clientJarLength = (int) attestationFile.length();
         byte[] fileBytes = new byte[clientJarLength + nonce.length];
