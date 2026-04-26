@@ -26,9 +26,61 @@ This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version 
 - Concurrency: The server can handle multiple client connections simultaneously using a thread pool.
 - Graceful Shutdown: The server can be shut down gracefully, ensuring that all ongoing operations are completed before termination.
 
+### Security Enhancements relative to the second phase
+
+#### Secure Communication (TLS)
+
+- All communication between client and server is performed over **TLS-secured sockets**.
+- Authentication is **unilateral** (client verifies server identity).
+
+#### Key and Certificate Management
+
+- The server posses a **keystore** containing their private/public key pair.
+- Each user posseses a **keystore** containing their private/public key pair and a **trustore** containing the other user's certificate's with whom the user interacts with.
+- The Client application maintains a **truststore** containing Server certificate
+
+#### Secure Storage (Encrypted Persistence)
+
+- Sensitive server data (`users.txt`, `homes.txt`) is encrypted using **PBE (Password-Based Encryption)** derived from a password provided at server startup
+- A **persistent salt** is stored (in-code) to ensure deterministic key derivation across executions.
+
+#### Integrity Verification
+
+- Every file `<file>` has a corresponding `<file>.hash` generated using **SHA-256**
+- Integrity is verified:
+  - On server startup
+  - Before file usage
+  - On shutdown
+- If integrity fails Server outputs `NOK-INTEGRITY` and the execution is immediately terminated
+
+#### End-to-End Encryption (E2EE)
+
+- Device state command (`EC`) are Encrypted **end-to-end**
+  - Only readable by users with permission for the corresponding section
+- The server:
+  - **Stores but cannot decrypt** these values
+
+#### Certificate Distribution
+
+- The server acts as a **certificate distribution service**
+- Clients:
+  - Request certificates of other users
+  - Store them locally in their truststore
+
+#### Remote Attestation
+
+- The server validates the integrity of the client application through:
+  - A **remote attestation mechanism**
+
+#### Secure Logging
+
+- Logs:
+  - Maintain integrity verification
+  - Sensitive data is protected via encryption mechanisms where applicable
+
 ## Architecture
 
-![Architecture Diagram](other/Diagrama.png)
+![Architecture Diagram](/Diagrama.png)
 
 ### File Structure
 
@@ -54,7 +106,7 @@ This project was developed in both Ubuntu 24.04 LTS and MacOS, any Java version 
 |domain/  
 |      |core/
 |      |...                  --> Classes from the Domain (House, Section, User)
-|      |controller.java      --> Thread class that controls all domain classes
+|      |Controller.java      --> Thread class that controls all domain classes
 |services/
 |      |LoggerService.java   --> Controlls all logging functionality
 |      |Repository.java      --> Layer of access to the persistence, works as an in-memmory database
@@ -101,12 +153,12 @@ Server/
 
 ##### How is Data stored?
 
-When exiting, SpertaServer safely closes all threads and persisits the HashMaps inside Repository [see file structure](#file-structure). These HashMaps are then serialized (using java's native serialization) and that byte stream is stored in homes.txt and users.txt respectively.
+When exiting, SpertaServer safely closes all threads and persisits the HashMaps inside Repository [see file structure](#file-structure), before storing the data, the server verifies the integrity of the files (using Hashing). These HashMaps are then serialized (using java's native serialization), are encrypted using PBE with the server's passoword and that byte stream is stored in homes.txt and users.txt respectively.
 No data is stored while the server is running with the exception of logs. Data is only persisted when the server ends it's execution.
 
-Every time SpertaServer loads, it loads the bytes from these files and creates a backup, in case of malfuncioning, preventing full data-loss.
-
 Logs are managed by LoggerService that is called by a Controller thread that has just executed successfully an operation. All logs are appended to their respective Device's and House's log. If there is no log file, LoggerService creates one. Appending to a text file is safe and reasonably easy and quick and this operation is done as quickly as possible. For this reason, these log files might have slightly incongruent timestamps (in the order of the milliseconds) because, to avoid uneccessary bottlenecks, there are no write locks onto these files.
+
+Likewise when doing any write/read operations to the logs, it is verified each log's integrity. But logs are only encrypted using end to end encryption, not PBE.
 
 ## Usage
 
@@ -150,5 +202,10 @@ java -jar SpertaClient.jar <server_ip> <username> <password>
 
 - The current implementation does not include the delete operations for users, houses, sections, and devices. Future work will involve implementing these operations to allow for more comprehensive management of the system.
 - The current design does not allow different users to have the same house name. Future work will involve implementing a more robust naming system to allow for duplicate house names while still maintaining unique identifiers for each house.
-- The current implementation does not include security features such as encryption for user passwords. Future work will involve implementing these security features to enhance the overall security of the system.
-- When saving client requests they are saved to `./data/clientFiles/` . This dir is not protected and can be accessed by anyone that has access to it.
+- When saving client requests they are saved to `./SpertaClient/data/` . This dir is not protected and can be accessed by anyone that has access to it, not only that, logs are re-written, so if different user's do the same operation on the same house the file that stores that operation is re-written.
+
+**Very Important:**
+
+- The Server only verifies data's integrity when loading up and when shutting down (see how data is stored section), this was a design decision that was made in the first phase of the project, being a core limitation of our design. The same does not happen for logs, which have multiple reads and writes in a server's execution cycle, hence the data is always being verified with each read and write operation.
+
+ We consider that this does not pose any real complexity dephecit, since our modular structure ensures that there is only a single way to store and read files from data.txt and homes.txt. This is relevant, because using this structured approach, it would be easy to add multiple reads/writes to these files.
